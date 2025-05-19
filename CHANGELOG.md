@@ -5,6 +5,7 @@
 ### Docs
 
 - Actualizar CHANGELOG.md para versión main
+- Actualizar CHANGELOG.md para versión main
 
 ### Feat
 
@@ -15,6 +16,7 @@
 - Implement login portal and customer management system
 - Implement login portal and customer management system
 - Update the version
+- Add the sonar analysis
 
 ### Fix
 
