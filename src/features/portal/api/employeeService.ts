@@ -46,10 +46,13 @@ export const employeeService = {
   },
 
   toggleEmployeeStatus: async (id: string, isActive: boolean): Promise<User> => {
-    const response = await api.patch<{ message: string; user: User }>(
-      `/auth/users/${id}/toggle-active`,
-      { isActive }
-    );
-    return response.data.user;
+    if (!isActive) {
+      const response = await api.delete<{ message: string; user: User }>(`/auth/users/${id}`);
+      return response.data.user;
+    } else {
+      // For reactivation, we'll use the update endpoint since there's no specific reactivation endpoint
+      const response = await api.patch<{ message: string; user: User }>(`/auth/users/${id}`, { isActive: true });
+      return response.data.user;
+    }
   },
 };

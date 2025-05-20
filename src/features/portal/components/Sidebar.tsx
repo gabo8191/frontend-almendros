@@ -1,6 +1,17 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingCart, Users, Package, Settings, X } from 'lucide-react';
+import { 
+  Home, 
+  ShoppingCart, 
+  Users, 
+  Package, 
+  Settings, 
+  X, 
+  Truck,
+  BarChart3,
+  ClipboardList,
+  BoxesIcon
+} from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import { useAuth } from '../../auth/context/AuthContext';
 import { Role } from '../../auth/types';
@@ -67,15 +78,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         
         <nav className="p-4 space-y-1">
           <SidebarLink to="/portal" icon={<Home size={20} />} label="Inicio" />
-          <SidebarLink to="/portal/pos" icon={<ShoppingCart size={20} />} label="Sistema POS" />
-          {isAdmin ? (
+          <SidebarLink to="/portal/pos" icon={<ShoppingCart size={20} />} label="POS" />
+          <SidebarLink to="/portal/sales" icon={<ClipboardList size={20} />} label="Ventas" />
+          <SidebarLink to="/portal/inventory" icon={<BoxesIcon size={20} />} label="Inventario" />
+          <SidebarLink to="/portal/reports" icon={<BarChart3 size={20} />} label="Reportes" />
+          
+          {isAdmin && (
             <>
               <SidebarLink to="/portal/employees" icon={<Users size={20} />} label="Empleados" />
               <SidebarLink to="/portal/clients" icon={<Package size={20} />} label="Clientes" />
+              <SidebarLink to="/portal/suppliers" icon={<Truck size={20} />} label="Proveedores" />
               <SidebarLink to="/portal/settings" icon={<Settings size={20} />} label="Configuración" />
             </>
-          ) : (
-            <SidebarLink to="/portal/clients" icon={<Package size={20} />} label="Clientes" />
           )}
         </nav>
         
