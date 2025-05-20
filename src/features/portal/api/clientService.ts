@@ -57,10 +57,13 @@ export const clientService = {
   },
 
   toggleClientStatus: async (id: number, isActive: boolean): Promise<Client> => {
-    const response = await api.patch<{ message: string; client: Client }>(
-      `/clients/${id}/toggle-active`,
-      { isActive }
-    );
-    return response.data.client;
+    if (!isActive) {
+      const response = await api.delete<{ message: string; client: Client }>(`/clients/${id}`);
+      return response.data.client;
+    } else {
+      // For reactivation, we'll use the update endpoint since there's no specific reactivation endpoint
+      const response = await api.patch<{ message: string; client: Client }>(`/clients/${id}`, { isActive: true });
+      return response.data.client;
+    }
   },
 };

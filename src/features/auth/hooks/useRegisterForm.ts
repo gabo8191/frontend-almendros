@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { registerSchema } from '../schemas/auth.schema';
+import { z } from 'zod';
 
 interface RegisterForm {
   email: string;
@@ -12,15 +14,7 @@ interface RegisterForm {
   address: string;
 }
 
-interface RegisterFormErrors {
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  firstName?: string;
-  lastName?: string;
-  phoneNumber?: string;
-  address?: string;
-}
+type RegisterFormErrors = z.inferFormattedError<typeof registerSchema>;
 
 export const useRegisterForm = () => {
   const [formData, setFormData] = useState<RegisterForm>({
@@ -32,52 +26,29 @@ export const useRegisterForm = () => {
     phoneNumber: '',
     address: '',
   });
-  const [errors, setErrors] = useState<RegisterFormErrors>({});
+  const [errors, setErrors] = useState<RegisterFormErrors['fieldErrors']>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const validateForm = (): boolean => {
-    const newErrors: RegisterFormErrors = {};
-    
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    try {
+      registerSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setErrors(error.format().fieldErrors);
+      }
+      return false;
     }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-    
-    // Confirm password validation
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-    
-    // Name validation
-    if (!formData.firstName) {
-      newErrors.firstName = 'First name is required';
-    }
-    
-    if (!formData.lastName) {
-      newErrors.lastName = 'Last name is required';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
-    // Clear the error for this field if it exists
-    if (errors[name as keyof RegisterFormErrors]) {
+    if (errors[name as keyof RegisterForm]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
@@ -103,7 +74,6 @@ export const useRegisterForm = () => {
       navigate('/portal');
     } catch (error) {
       console.error('Registration failed:', error);
-      // Error is handled in the context
     } finally {
       setIsSubmitting(false);
     }

@@ -1,34 +1,30 @@
 import React, { useState } from 'react';
-import { Mail, User, Phone, MapPin, FileText } from 'lucide-react';
 import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import { Supplier } from '../../api/supplierService';
 
-interface NewClientModalProps {
+interface EditSupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: {
-    name: string;
-    email: string;
-    phoneNumber: string;
-    address: string;
-    documentType: string;
-    documentNumber: string;
-  }) => Promise<boolean>;
+  supplier: Supplier;
+  onSave: (supplierData: Partial<Supplier>) => Promise<boolean>; // Changed from Promise<void> to Promise<boolean>
 }
 
-const NewClientModal: React.FC<NewClientModalProps> = ({
+const EditSupplierModal: React.FC<EditSupplierModalProps> = ({
   isOpen,
   onClose,
+  supplier,
   onSave,
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    address: '',
-    documentType: 'CC',
-    documentNumber: '',
+    name: supplier.name,
+    contactName: supplier.contactName,
+    email: supplier.email,
+    phoneNumber: supplier.phoneNumber,
+    address: supplier.address,
+    documentType: supplier.documentType,
+    documentNumber: supplier.documentNumber,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,18 +59,12 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const success = await onSave(formData);
+      const success = await onSave(formData); // Get the success boolean
       if (success) {
         onClose();
-        setFormData({
-          name: '',
-          email: '',
-          phoneNumber: '',
-          address: '',
-          documentType: 'CC',
-          documentNumber: '',
-        });
       }
+    } catch (error) {
+      console.error('Error saving supplier:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -84,15 +74,21 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Nuevo Cliente"
+      title="Editar Proveedor"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Nombre Completo"
+          label="Nombre de la Empresa"
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           error={errors.name}
-          icon={<User size={18} />}
+          required
+        />
+
+        <Input
+          label="Nombre del Contacto"
+          value={formData.contactName}
+          onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
           required
         />
 
@@ -102,7 +98,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
           error={errors.email}
-          icon={<Mail size={18} />}
           required
         />
 
@@ -113,12 +108,12 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
             </label>
             <select
               value={formData.documentType}
-              onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, documentType: e.target.value as Supplier['documentType'] })}
               className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             >
+              <option value="NIT">NIT</option>
               <option value="CC">Cédula de Ciudadanía</option>
               <option value="CE">Cédula de Extranjería</option>
-              <option value="NIT">NIT</option>
               <option value="PP">Pasaporte</option>
             </select>
           </div>
@@ -128,7 +123,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
             value={formData.documentNumber}
             onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
             error={errors.documentNumber}
-            icon={<FileText size={18} />}
             required
           />
         </div>
@@ -138,14 +132,12 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
           type="tel"
           value={formData.phoneNumber}
           onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-          icon={<Phone size={18} />}
         />
 
         <Input
           label="Dirección"
           value={formData.address}
           onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-          icon={<MapPin size={18} />}
         />
 
         <div className="flex justify-end space-x-3 mt-6">
@@ -153,7 +145,7 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
             Cancelar
           </Button>
           <Button type="submit" isLoading={isSubmitting}>
-            Crear Cliente
+            Guardar Cambios
           </Button>
         </div>
       </form>
@@ -161,4 +153,4 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
   );
 };
 
-export default NewClientModal;
+export default EditSupplierModal;
