@@ -12,9 +12,9 @@ import {
   ClipboardList,
   BoxesIcon
 } from 'lucide-react';
-import { cn } from '../../../utils/cn';
-import { useAuth } from '../../auth/context/AuthContext';
-import { Role } from '../../auth/types';
+import { cn } from '../../utils/cn';
+import { useAuth } from '../../features/auth/context/AuthContext';
+import { Role } from '../../features/auth/types';
 
 interface SidebarProps {
   isOpen: boolean;
