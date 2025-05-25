@@ -43,9 +43,10 @@ const Employees: React.FC = () => {
 
   const handleToggleStatus = async (employee: UserType) => {
     try {
+      // This will now use the updated service logic
       await employeeService.toggleEmployeeStatus(employee.id, !employee.isActive);
       showToast('success', `Usuario ${employee.isActive ? 'desactivado' : 'activado'} exitosamente`);
-      fetchEmployees();
+      fetchEmployees(); // Refresh the list
     } catch (error) {
       showToast('error', 'Error al cambiar el estado del usuario');
     }
