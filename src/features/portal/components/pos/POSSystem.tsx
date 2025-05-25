@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Plus, AlertTriangle, History } from 'lucide-react';
+import { Package, Search, Plus, AlertTriangle, Edit } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { productService, Product } from '../../api/productService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
@@ -7,8 +8,8 @@ import Input from '../../../../shared/components/Input';
 import { useToast } from '../../../../shared/context/ToastContext';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { Role } from '../../../auth/types';
-import PriceHistoryModal from './PriceHistoryModal';
 import NewProductModal from './NewProductModal';
+import EditProductModal from './EditProductModal';
 import { useProductPrice } from './Hooks/useProductPrice';
 
 // Price cell component to display the selling price
@@ -62,11 +63,12 @@ const POSSystem: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [isPriceHistoryModalOpen, setIsPriceHistoryModalOpen] = useState(false);
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false);
+  const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const { showToast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isAdmin = user?.role === Role.ADMINISTRATOR;
 
   const fetchProducts = async () => {
@@ -107,9 +109,36 @@ const POSSystem: React.FC = () => {
     }).format(price);
   };
 
-  const handleViewPriceHistory = (product: Product) => {
-    setSelectedProduct(product);
-    setIsPriceHistoryModalOpen(true);
+  const handleEditProduct = (product: Product) => {
+    setProductToEdit(product);
+    setIsEditProductModalOpen(true);
+  };
+
+  const handleAdjustStock = (product: Product) => {
+    // Navigate to inventory movements page with product ID as state
+    navigate('/portal/inventory', { 
+      state: { 
+        productId: product.id,
+        productName: product.name 
+      }
+    });
+  };
+
+  const handleUpdateProduct = async (productData: Partial<Product>) => {
+    if (!productToEdit) return false;
+    
+    try {
+      await productService.updateProduct(productToEdit.id, productData);
+      showToast('success', 'Producto actualizado exitosamente');
+      // Refresh both products and low stock data
+      await Promise.all([fetchProducts(), fetchLowStockProducts()]);
+      // Force refresh of price components by triggering a key change
+      setProducts(prev => [...prev]);
+      return true;
+    } catch (error) {
+      showToast('error', error.message || 'Error al actualizar el producto');
+      throw error;
+    }
   };
 
   return (
@@ -190,9 +219,7 @@ const POSSystem: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Precio
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -211,33 +238,12 @@ const POSSystem: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <SellingPriceCell productId={product.id} />
+                      <SellingPriceCell key={`selling-${product.id}-${product.updatedAt}`} productId={product.id} />
                       {isAdmin && (
-                        <PurchasePriceCell productId={product.id} />
+                        <PurchasePriceCell key={`purchase-${product.id}-${product.updatedAt}`} productId={product.id} />
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {isAdmin && (
-                          <>
-                            <Button variant="ghost" size="sm">
-                              Editar
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              Ajustar Stock
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={<History size={16} />}
-                          onClick={() => handleViewPriceHistory(product)}
-                        >
-                          Historial
-                        </Button>
-                      </div>
-                    </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -267,17 +273,6 @@ const POSSystem: React.FC = () => {
         )}
       </Card>
 
-      {selectedProduct && (
-        <PriceHistoryModal
-          isOpen={isPriceHistoryModalOpen}
-          onClose={() => {
-            setIsPriceHistoryModalOpen(false);
-            setSelectedProduct(null);
-          }}
-          product={selectedProduct}
-        />
-      )}
-
       <NewProductModal
         isOpen={isNewProductModalOpen}
         onClose={() => setIsNewProductModalOpen(false)}
@@ -293,6 +288,18 @@ const POSSystem: React.FC = () => {
           }
         }}
       />
+
+      {productToEdit && (
+        <EditProductModal
+          isOpen={isEditProductModalOpen}
+          onClose={() => {
+            setIsEditProductModalOpen(false);
+            setProductToEdit(null);
+          }}
+          product={productToEdit}
+          onSave={handleUpdateProduct}
+        />
+      )}
     </div>
   );
 };

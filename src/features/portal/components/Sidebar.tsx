@@ -78,10 +78,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         
         <nav className="p-4 space-y-1">
           <SidebarLink to="/portal" icon={<Home size={20} />} label="Inicio" />
-          <SidebarLink to="/portal/pos" icon={<ShoppingCart size={20} />} label="POS" />
+          <SidebarLink to="/portal/pos" icon={<ShoppingCart size={20} />} label="Productos" />
           <SidebarLink to="/portal/sales" icon={<ClipboardList size={20} />} label="Ventas" />
           <SidebarLink to="/portal/inventory" icon={<BoxesIcon size={20} />} label="Inventario" />
-          <SidebarLink to="/portal/reports" icon={<BarChart3 size={20} />} label="Reportes" />
+          {isAdmin && (
+            <SidebarLink to="/portal/reports" icon={<BarChart3 size={20} />} label="Reportes" />
+          )}
           
           {isAdmin && (
             <>
