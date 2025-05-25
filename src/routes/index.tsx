@@ -4,13 +4,12 @@ import { AuthProvider } from '../features/auth/context/AuthContext';
 import { ToastProvider } from '../shared/context/ToastContext';
 import ProtectedRoute from './ProtectedRoute';
 
-import LandingPage from '../features/landing/components/LandingPage';
-import LoginPage from '../pages/LoginPage';
-import Portal from '../features/portal/components/Portal';
+import LandingPage from '../pages/landing/LandingPage';
+import LoginPage from '../pages/login/LoginPage';
+import Portal from '../pages/portal/Portal';
 import POSSystem from '../features/portal/components/pos/POSSystem';
 import Employees from '../features/portal/components/employees/Employees';
 import Clients from '../features/portal/components/clients/Clients';
-import NewClient from '../features/portal/components/clients/NewClient';
 import Settings from '../features/portal/components/settings/Settings';
 import Dashboard from '../features/portal/components/dashboard/Dashboard';
 import SalesPage from '../features/portal/components/sales/SalesPage';
@@ -34,7 +33,6 @@ const AppRoutes: React.FC = () => {
                 <Route path="sales" element={<SalesPage />} />
                 <Route path="employees" element={<Employees />} />
                 <Route path="clients" element={<Clients />} />
-                <Route path="clients/new" element={<NewClient />} />
                 <Route path="inventory" element={<InventoryMovements />} />
                 <Route path="reports" element={<InventoryReports />} />
                 <Route path="suppliers" element={<SuppliersPage />} />

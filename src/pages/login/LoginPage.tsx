@@ -1,8 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import Header from '../shared/components/Header';
-import LoginForm from '../features/auth/components/LoginForm';
-import { useAuth } from '../features/auth/context/AuthContext';
+import Header from '../../shared/components/Header';
+import LoginForm from '../../features/auth/components/LoginForm';
+import { useAuth } from '../../features/auth/context/AuthContext';
 
 const LoginPage: React.FC = () => {
   const { isAuthenticated } = useAuth();

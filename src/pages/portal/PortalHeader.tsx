@@ -1,6 +1,6 @@
 import React from 'react';
 import { Menu, BellRing, User, LogOut } from 'lucide-react';
-import { useAuth } from '../../auth/context/AuthContext';
+import { useAuth } from '../../features/auth/context/AuthContext';
 import { LeafyGreen } from 'lucide-react';
 
 interface PortalHeaderProps {

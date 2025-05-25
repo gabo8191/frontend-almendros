@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Button from '../../../shared/components/Button';
-import MobileMenu from '../../../shared/components/MobileMenu';
-import { Modal } from '../../../shared/components/Modal';
+import Button from '../../shared/components/Button';
+import MobileMenu from '../../shared/components/MobileMenu';
+import Modal from '../../shared/components/Modal';
 import { LeafyGreen } from 'lucide-react';
 
 const LandingPage: React.FC = () => {

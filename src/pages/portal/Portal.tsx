@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../auth/context/AuthContext';
-import { Role } from '../../auth/types';
+import { useAuth } from '../../features/auth/context/AuthContext';
+import { Role } from '../../features/auth/types';
 import PortalHeader from './PortalHeader';
 import Sidebar from './Sidebar';
 import { Outlet } from 'react-router-dom';
