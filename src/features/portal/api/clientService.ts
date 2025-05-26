@@ -36,7 +36,9 @@ interface CreateClientData {
 }
 
 export const clientService = {
+  // Modified to include both active and inactive clients
   getClients: async (page = 1, limit = 10): Promise<PaginatedResponse<Client>> => {
+    // Remove isActive filter to get all clients (both active and inactive)
     const response = await api.get<PaginatedResponse<Client>>(`/clients?page=${page}&limit=${limit}`);
     return response.data;
   },
@@ -56,13 +58,15 @@ export const clientService = {
     return response.data.client;
   },
 
+  // Updated to use the proper activation endpoint
   toggleClientStatus: async (id: number, isActive: boolean): Promise<Client> => {
-    if (!isActive) {
-      const response = await api.delete<{ message: string; client: Client }>(`/clients/${id}`);
+    if (isActive) {
+      // Use the dedicated activation endpoint
+      const response = await api.patch<{ message: string; client: Client }>(`/clients/${id}/activate`);
       return response.data.client;
     } else {
-      // For reactivation, we'll use the update endpoint since there's no specific reactivation endpoint
-      const response = await api.patch<{ message: string; client: Client }>(`/clients/${id}`, { isActive: true });
+      // Use DELETE for deactivation
+      const response = await api.delete<{ message: string; client: Client }>(`/clients/${id}`);
       return response.data.client;
     }
   },

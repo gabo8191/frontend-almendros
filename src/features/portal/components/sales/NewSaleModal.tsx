@@ -3,64 +3,37 @@ import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import { Plus, Trash2, Search, AlertCircle } from 'lucide-react';
-import { productService, Product } from '../../api/productService';
+import { productService } from '../../api/productService';
 import { clientService, Client } from '../../api/clientService';
 import { saleService } from '../../api/saleService';
 import { useToast } from '../../../../shared/context/ToastContext';
 import NewClientModal from '../../components/clients/NewClient';
-import { useProductPrice } from '../pos/Hooks/useProductPrice';
 
-// Component to display product price in search results
-const ProductSearchPriceDisplay: React.FC<{ productId: number }> = ({ productId }) => {
-  const { sellingPrice, loading, error } = useProductPrice(productId);
-  
-  const formatPrice = (price: number | null) => {
-    if (price === null) return 'N/A';
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-    }).format(price);
-  };
-
-  if (loading) return <span className="text-sm text-gray-500">Cargando...</span>;
-  if (error) return <span className="text-sm text-red-500">Error</span>;
-  
-  return <span>{formatPrice(sellingPrice)}</span>;
-};
-
-// Price component for products in the sale
-const ProductPriceDisplay: React.FC<{ productId: number; onPriceLoad: (price: number) => void }> = ({ productId, onPriceLoad }) => {
-  const { sellingPrice, loading, error } = useProductPrice(productId);
-  
-  const formatPrice = (price: number | null) => {
-    if (price === null) return 'N/A';
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-    }).format(price);
-  };
-
-  // Call onPriceLoad when price is loaded
-  useEffect(() => {
-    if (sellingPrice !== null && !loading && !error) {
-      onPriceLoad(sellingPrice);
-    }
-  }, [sellingPrice, loading, error, onPriceLoad]);
-
-  if (loading) return <span className="text-sm text-gray-500">Cargando precio...</span>;
-  if (error) return <span className="text-sm text-red-500">Error al cargar precio</span>;
-  
-  return (
-    <span className="text-sm font-medium">
-      Precio: {formatPrice(sellingPrice)}
-    </span>
-  );
-};
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  minQuantity: number;
+  maxQuantity: number;
+  supplierId: number;
+  currentStock: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  prices?: Array<{
+    id: number;
+    purchasePrice: number;
+    sellingPrice: number;
+    isCurrentPrice: boolean;
+  }>;
+  purchasePrice?: number;
+  sellingPrice?: number;
+}
 
 interface NewSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaleCreated: () => void; // Changed to match SalesPage expectation
+  onSaleCreated: () => void;
 }
 
 interface SaleDetail {
@@ -80,8 +53,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     clientId: '',
-    saleDate: new Date().toISOString().split('T')[0],
-    notes: '',
     details: [] as SaleDetail[],
   });
   const [products, setProducts] = useState<Product[]>([]);
@@ -93,6 +64,28 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [productSearchIndices, setProductSearchIndices] = useState<Record<number, string>>({});
   const { showToast } = useToast();
+
+  const getCurrentPrices = (product: Product) => {
+    if (product.prices && Array.isArray(product.prices) && product.prices.length > 0) {
+      const currentPrice = product.prices.find(p => p.isCurrentPrice) || product.prices[0];
+      return {
+        selling: currentPrice.sellingPrice,
+        purchase: currentPrice.purchasePrice
+      };
+    }
+    return {
+      selling: product.sellingPrice,
+      purchase: product.purchasePrice
+    };
+  };
+
+  const formatPrice = (price: number | null | undefined) => {
+    if (price === null || price === undefined) return 'N/A';
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+    }).format(price);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,24 +99,19 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
           setProducts(productsResponse.data);
           setClients(clientsResponse.data);
         } catch (error) {
-          console.error('Error loading data:', error);
           showToast('error', 'Error al cargar los datos');
         } finally {
           setIsLoadingData(false);
         }
       }
     };
-
     fetchData();
   }, [isOpen, showToast]);
 
-  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         clientId: '',
-        saleDate: new Date().toISOString().split('T')[0],
-        notes: '',
         details: [],
       });
       setProductSearchIndices({});
@@ -147,23 +135,18 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
       if (!detail.productId || detail.productId === 0) {
         newErrors[`product_${index}`] = 'Selecciona un producto';
       }
-      
       if (!detail.quantity || detail.quantity <= 0) {
         newErrors[`quantity_${index}`] = 'La cantidad debe ser mayor a 0';
       }
-      
       if (detail.currentStock !== undefined && detail.quantity > detail.currentStock) {
         newErrors[`quantity_${index}`] = `Stock insuficiente (disponible: ${detail.currentStock})`;
       }
-      
       if (!detail.unitPrice || detail.unitPrice <= 0) {
         newErrors[`unitPrice_${index}`] = 'El precio debe ser mayor a 0';
       }
-
       if (detail.discountAmount < 0) {
         newErrors[`discount_${index}`] = 'El descuento no puede ser negativo';
       }
-
       if (detail.discountAmount > (detail.quantity * detail.unitPrice)) {
         newErrors[`discount_${index}`] = 'El descuento no puede ser mayor al subtotal';
       }
@@ -194,22 +177,15 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
       ...formData,
       details: newDetails,
     });
-    
-    // Clean up product search terms
     const updatedSearchIndices = { ...productSearchIndices };
     delete updatedSearchIndices[index];
-    
-    // Remap keys to match new indices
     const newSearchIndices: Record<number, string> = {};
     Object.keys(updatedSearchIndices).forEach(key => {
       const numKey = parseInt(key);
       const newKey = numKey > index ? numKey - 1 : numKey;
       newSearchIndices[newKey] = updatedSearchIndices[numKey];
     });
-    
     setProductSearchIndices(newSearchIndices);
-
-    // Clear related errors
     const newErrors = { ...errors };
     delete newErrors[`product_${index}`];
     delete newErrors[`quantity_${index}`];
@@ -220,40 +196,24 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
   const handleProductSelection = (index: number, productId: number) => {
     const selectedProduct = products.find(p => p.id === productId);
-    
     if (selectedProduct) {
+      const prices = getCurrentPrices(selectedProduct);
       const newDetails = [...formData.details];
       newDetails[index] = {
         ...newDetails[index],
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         currentStock: selectedProduct.currentStock,
-        sellingPrice: selectedProduct.sellingPrice,
-        unitPrice: 0, // Will be set when price loads
+        sellingPrice: prices.selling,
+        unitPrice: prices.selling || 0,
       };
       setFormData({ ...formData, details: newDetails });
-
-      // Clear product search for this index
       const newSearchIndices = { ...productSearchIndices };
       newSearchIndices[index] = selectedProduct.name;
       setProductSearchIndices(newSearchIndices);
-
-      // Clear related errors
       const newErrors = { ...errors };
       delete newErrors[`product_${index}`];
       setErrors(newErrors);
-    }
-  };
-
-  // Handle price loading from the ProductPriceDisplay component
-  const handlePriceLoad = (index: number, price: number) => {
-    const newDetails = [...formData.details];
-    if (newDetails[index] && newDetails[index].unitPrice === 0) {
-      newDetails[index] = {
-        ...newDetails[index],
-        unitPrice: price,
-      };
-      setFormData({ ...formData, details: newDetails });
     }
   };
 
@@ -264,10 +224,11 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
       [field]: value,
     };
     setFormData({ ...formData, details: newDetails });
-
-    // Clear related errors
     const newErrors = { ...errors };
     delete newErrors[`${field}_${index}`];
+    if (errors[`${String(field)}_${index}`]) {
+      delete newErrors[`${String(field)}_${index}`];
+    }
     setErrors(newErrors);
   };
 
@@ -276,8 +237,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
       ...productSearchIndices,
       [index]: value
     });
-
-    // If the search is cleared, reset the product selection
     if (!value) {
       const newDetails = [...formData.details];
       newDetails[index] = {
@@ -294,7 +253,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       showToast('error', 'Por favor corrige los errores en el formulario');
       return;
@@ -302,42 +260,34 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Format the sale date properly
-      const saleDateTime = new Date(formData.saleDate + 'T12:00:00Z').toISOString();
-      
-      // Convert to the format expected by the API
+      const today = new Date();
+      const saleDate = today.toISOString();
+
       const saleData = {
-        saleDate: saleDateTime,
-        notes: formData.notes.trim() || undefined,
         clientId: parseInt(formData.clientId),
+        saleDate: saleDate,
         details: formData.details.map(detail => ({
+          productId: detail.productId,
           quantity: detail.quantity,
           unitPrice: detail.unitPrice,
           discountAmount: detail.discountAmount || 0,
-          productId: detail.productId,
         })),
       };
 
-      console.log('Sending sale data:', saleData);
-      
       await saleService.createSale(saleData);
-      
       showToast('success', 'Venta registrada exitosamente');
       onSaleCreated();
       onClose();
-      
     } catch (error: any) {
-      console.error('Error creating sale:', error);
-      
-      // Handle different types of errors
-      if (error.response?.status === 400) {
-        const errorMessage = error.response?.data?.message || 'Datos inválidos';
-        showToast('error', `Error: ${errorMessage}`);
-      } else if (error.response?.status === 404) {
-        showToast('error', 'Cliente o producto no encontrado');
-      } else {
-        showToast('error', 'Error al registrar la venta. Inténtalo de nuevo.');
+      let displayMessage = 'Error al registrar la venta. Inténtalo de nuevo.';
+      if (error.response?.data?.message) {
+        if (Array.isArray(error.response.data.message)) {
+          displayMessage = error.response.data.message.join('; ');
+        } else if (typeof error.response.data.message === 'string') {
+          displayMessage = error.response.data.message;
+        }
       }
+      showToast('error', displayMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -346,21 +296,19 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
   const handleClientSelection = (clientId: number) => {
     setFormData({ ...formData, clientId: clientId.toString() });
     setClientSearchTerm('');
-    
-    // Clear client error
     const newErrors = { ...errors };
     delete newErrors.clientId;
     setErrors(newErrors);
   };
 
-  const filteredClients = clients.filter(client => 
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
     client.documentNumber.includes(clientSearchTerm)
   );
 
   const getFilteredProducts = (searchTerm: string) => {
-    if (!searchTerm) return products.slice(0, 10); // Show first 10 if no search
-    return products.filter(product => 
+    if (!searchTerm) return products.slice(0, 10);
+    return products.filter(product =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
@@ -414,7 +362,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
             <label className="block text-sm font-medium text-gray-700">
               Cliente *
             </label>
-            
             {selectedClient ? (
               <div className="flex items-center justify-between p-3 bg-primary-50 rounded-lg border">
                 <div>
@@ -456,7 +403,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                     Nuevo Cliente
                   </Button>
                 </div>
-                
                 {clientSearchTerm && (
                   <div className="max-h-40 overflow-y-auto border rounded-lg bg-white">
                     {filteredClients.length > 0 ? (
@@ -484,21 +430,10 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 )}
               </>
             )}
-            
             {errors.clientId && (
               <p className="text-sm text-red-600">{errors.clientId}</p>
             )}
           </div>
-
-          {/* Sale Date */}
-          <Input
-            type="date"
-            label="Fecha de Venta *"
-            value={formData.saleDate}
-            onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-            required
-            max={new Date().toISOString().split('T')[0]}
-          />
 
           {/* Products Section */}
           <div>
@@ -516,17 +451,14 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 Agregar Producto
               </Button>
             </div>
-
             {errors.details && (
               <p className="mb-4 text-sm text-red-600">{errors.details}</p>
             )}
-
             <div className="space-y-4">
               {formData.details.map((detail, index) => {
                 const searchTerm = productSearchIndices[index] || '';
                 const filteredProductsList = getFilteredProducts(searchTerm);
                 const selectedProduct = products.find(p => p.id === detail.productId);
-                
                 return (
                   <div key={index} className="p-4 border rounded-lg bg-gray-50">
                     <div className="flex justify-between items-start mb-3">
@@ -540,23 +472,17 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                         className="text-red-600 hover:text-red-800"
                       />
                     </div>
-
-                    {/* Product Selection */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Buscar producto
                       </label>
-                      
                       {selectedProduct ? (
                         <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
                           <div>
                             <div className="font-medium">{selectedProduct.name}</div>
                             <div className="text-sm text-gray-500">
-                              Stock: {selectedProduct.currentStock} | 
-                              <ProductPriceDisplay 
-                                productId={selectedProduct.id}
-                                onPriceLoad={(price) => handlePriceLoad(index, price)}
-                              />
+                              Stock: {selectedProduct.currentStock} |
+                              Precio: {formatPrice(getCurrentPrices(selectedProduct).selling)}
                             </div>
                           </div>
                           <Button
@@ -588,37 +514,39 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                             onChange={(e) => handleProductSearchChange(index, e.target.value)}
                             icon={<Search size={18} />}
                           />
-                          
                           {(searchTerm || filteredProductsList.length > 0) && (
                             <div className="mt-2 max-h-40 overflow-y-auto border rounded-lg bg-white">
                               {filteredProductsList.length > 0 ? (
-                                filteredProductsList.map((product) => (
-                                  <div
-                                    key={product.id}
-                                    className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
-                                      product.currentStock < 1 ? 'opacity-50' : ''
-                                    }`}
-                                    onClick={() => product.currentStock > 0 && handleProductSelection(index, product.id)}
-                                  >
-                                    <div className="flex justify-between items-start">
-                                      <div className="flex-1">
-                                        <div className="font-medium">{product.name}</div>
-                                        <div className="text-sm text-gray-500">
-                                          Stock: {product.currentStock} | 
-                                          Precio: <ProductSearchPriceDisplay productId={product.id} />
+                                filteredProductsList.map((product) => {
+                                  const prices = getCurrentPrices(product);
+                                  return (
+                                    <div
+                                      key={product.id}
+                                      className={`p-3 cursor-pointer hover:bg-gray-50 border-b last:border-b-0 ${
+                                        product.currentStock < 1 ? 'opacity-50' : ''
+                                      }`}
+                                      onClick={() => product.currentStock > 0 && handleProductSelection(index, product.id)}
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                          <div className="font-medium">{product.name}</div>
+                                          <div className="text-sm text-gray-500">
+                                            Stock: {product.currentStock} |
+                                            Precio: {formatPrice(prices.selling)}
+                                          </div>
                                         </div>
+                                        {product.currentStock < 5 && product.currentStock > 0 && (
+                                          <span className="text-amber-600 flex items-center text-xs">
+                                            <AlertCircle size={12} className="mr-1" /> Bajo stock
+                                          </span>
+                                        )}
+                                        {product.currentStock < 1 && (
+                                          <span className="text-red-600 text-xs">Sin stock</span>
+                                        )}
                                       </div>
-                                      {product.currentStock < 5 && product.currentStock > 0 && (
-                                        <span className="text-amber-600 flex items-center text-xs">
-                                          <AlertCircle size={12} className="mr-1" /> Bajo stock
-                                        </span>
-                                      )}
-                                      {product.currentStock < 1 && (
-                                        <span className="text-red-600 text-xs">Sin stock</span>
-                                      )}
                                     </div>
-                                  </div>
-                                ))
+                                  );
+                                })
                               ) : (
                                 <div className="p-3 text-center text-gray-500">
                                   No se encontraron productos
@@ -628,13 +556,10 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                           )}
                         </>
                       )}
-                      
                       {errors[`product_${index}`] && (
                         <p className="mt-1 text-sm text-red-600">{errors[`product_${index}`]}</p>
                       )}
                     </div>
-
-                    {/* Product Details */}
                     {detail.productId > 0 && (
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -667,11 +592,10 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                             error={errors[`discount_${index}`]}
                           />
                         </div>
-                        
                         <div className="flex justify-between items-center pt-2 border-t">
                           <span className="text-sm text-gray-600">Subtotal:</span>
                           <span className="font-semibold">
-                            ${calculateDetailSubtotal(detail).toFixed(2)}
+                            {formatPrice(calculateDetailSubtotal(detail))}
                           </span>
                         </div>
                       </div>
@@ -682,42 +606,28 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notas (opcional)
-            </label>
-            <textarea
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              rows={3}
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Agregar notas sobre la venta..."
-            />
-          </div>
-
           {/* Total */}
           <div className="border-t pt-6">
             <div className="flex justify-between items-center text-xl font-bold">
               <span>Total:</span>
               <span className="text-primary-600">
-                ${calculateTotal().toFixed(2)}
+                {formatPrice(calculateTotal())}
               </span>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex justify-end space-x-3 pt-6 border-t">
-            <Button 
+            <Button
               type="button"
-              variant="outline" 
-              onClick={onClose} 
+              variant="outline"
+              onClick={onClose}
               disabled={isSubmitting}
             >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               isLoading={isSubmitting}
               disabled={formData.details.length === 0 || !formData.clientId}
             >
@@ -741,7 +651,6 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
               showToast('success', 'Cliente creado exitosamente');
               return true;
             } catch (error) {
-              console.error('Error creating client:', error);
               showToast('error', 'Error al crear el cliente');
               return false;
             }
