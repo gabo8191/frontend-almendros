@@ -53,6 +53,8 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     clientId: '',
+    saleDate: new Date().toISOString().split('T')[0],
+    notes: '',
     details: [] as SaleDetail[],
   });
   const [products, setProducts] = useState<Product[]>([]);
@@ -112,6 +114,8 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
     if (!isOpen) {
       setFormData({
         clientId: '',
+        saleDate: new Date().toISOString().split('T')[0],
+        notes: '',
         details: [],
       });
       setProductSearchIndices({});
@@ -125,6 +129,18 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
     if (!formData.clientId) {
       newErrors.clientId = 'Selecciona un cliente';
+    }
+
+    if (!formData.saleDate) {
+      newErrors.saleDate = 'Selecciona una fecha';
+    } else {
+      const selectedDate = new Date(formData.saleDate);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      if (selectedDate > today) {
+        newErrors.saleDate = 'No puedes seleccionar una fecha futura';
+      }
     }
 
     if (formData.details.length === 0) {
@@ -141,9 +157,7 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
       if (detail.currentStock !== undefined && detail.quantity > detail.currentStock) {
         newErrors[`quantity_${index}`] = `Stock insuficiente (disponible: ${detail.currentStock})`;
       }
-      if (!detail.unitPrice || detail.unitPrice <= 0) {
-        newErrors[`unitPrice_${index}`] = 'El precio debe ser mayor a 0';
-      }
+      // Note: Removed unitPrice validation since it's now readonly
       if (detail.discountAmount < 0) {
         newErrors[`discount_${index}`] = 'El descuento no puede ser negativo';
       }
@@ -260,25 +274,29 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const today = new Date();
-      const saleDate = today.toISOString();
+      const saleDate = formData.saleDate;
 
       const saleData = {
         clientId: parseInt(formData.clientId),
         saleDate: saleDate,
+        notes: formData.notes || undefined,
         details: formData.details.map(detail => ({
           productId: detail.productId,
           quantity: detail.quantity,
-          unitPrice: detail.unitPrice,
           discountAmount: detail.discountAmount || 0,
         })),
       };
+
+      console.log('🚀 Datos que se enviarán al servidor:', saleData);
 
       await saleService.createSale(saleData);
       showToast('success', 'Venta registrada exitosamente');
       onSaleCreated();
       onClose();
     } catch (error: any) {
+      console.error('❌ Error completo:', error);
+      console.error('❌ Error response:', error.response?.data);
+      
       let displayMessage = 'Error al registrar la venta. Inténtalo de nuevo.';
       if (error.response?.data?.message) {
         if (Array.isArray(error.response.data.message)) {
@@ -435,6 +453,37 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
             )}
           </div>
 
+          {/* Date Selection */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Fecha de Venta *
+            </label>
+            <Input
+              type="date"
+              value={formData.saleDate}
+              onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full"
+            />
+            {errors.saleDate && (
+              <p className="text-sm text-red-600">{errors.saleDate}</p>
+            )}
+          </div>
+
+          {/* Notes Field */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Notas / Descripción (opcional)
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              placeholder="Agrega detalles adicionales sobre la venta..."
+              rows={3}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            />
+          </div>
+
           {/* Products Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -578,8 +627,9 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
                             step="0.01"
                             min="0"
                             value={detail.unitPrice || ''}
-                            onChange={(e) => handleDetailChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            readOnly={true}
                             error={errors[`unitPrice_${index}`]}
+                            className="bg-gray-100"
                           />
                           <Input
                             type="number"
@@ -629,7 +679,7 @@ const NewSaleModal: React.FC<NewSaleModalProps> = ({
             <Button
               type="submit"
               isLoading={isSubmitting}
-              disabled={formData.details.length === 0 || !formData.clientId}
+              disabled={formData.details.length === 0 || !formData.clientId || !formData.saleDate}
             >
               {isSubmitting ? 'Registrando...' : 'Registrar Venta'}
             </Button>

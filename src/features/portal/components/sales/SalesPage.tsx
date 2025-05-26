@@ -24,6 +24,11 @@ const SalesPage: React.FC = () => {
     startDate: '',
     endDate: '',
   });
+  // Estado para el ordenamiento por fecha e ID
+  const [sortConfig, setSortConfig] = useState({
+    field: 'saleDate', // 'saleDate' o 'id'
+    direction: 'desc'   // 'asc' o 'desc'
+  });
   const { showToast } = useToast();
 
   const fetchSales = async (page = currentPage) => {
@@ -115,6 +120,41 @@ const SalesPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  // Función para ordenar las ventas por fecha e ID
+  const sortSales = (sales: Sale[], config: { field: string; direction: string }) => {
+    if (!config.field) return sales;
+
+    const sortedSales = [...sales].sort((a, b) => {
+      let valueA: any, valueB: any;
+
+      if (config.field === 'saleDate') {
+        // Ordenar por fecha
+        valueA = new Date(a.saleDate);
+        valueB = new Date(b.saleDate);
+      } else if (config.field === 'id') {
+        // Ordenar por ID de venta
+        valueA = a.id;
+        valueB = b.id;
+      }
+
+      if (config.direction === 'asc') {
+        return valueA - valueB;
+      } else {
+        return valueB - valueA;
+      }
+    });
+
+    return sortedSales;
+  };
+
+  // Función para cambiar el ordenamiento
+  const handleSort = (field: string) => {
+    setSortConfig(prevConfig => ({
+      field: field,
+      direction: prevConfig.field === field && prevConfig.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('es-CO', {
       year: 'numeric',
@@ -132,8 +172,9 @@ const SalesPage: React.FC = () => {
     }).format(amount);
   };
 
-  const filteredSales = sales.filter(
-    (sale) => {
+  // Aplicar filtros y ordenamiento
+  const filteredAndSortedSales = sortSales(
+    sales.filter((sale) => {
       const searchLower = searchTerm.toLowerCase();
       
       // Search by sale ID
@@ -147,7 +188,8 @@ const SalesPage: React.FC = () => {
       }
       
       return false;
-    }
+    }),
+    sortConfig
   );
 
   const handlePageChange = (newPage: number) => {
@@ -190,7 +232,7 @@ const SalesPage: React.FC = () => {
       </div>
 
       <Card>
-        {/* Filters */}
+        {/* Filters and Sorting */}
         <div className="mb-6 space-y-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <Input
@@ -228,6 +270,39 @@ const SalesPage: React.FC = () => {
               )}
             </div>
           </div>
+          
+          {/* Sorting Controls - Solo Fecha e ID */}
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
+            <span className="text-sm font-medium text-gray-700">Ordenar por:</span>
+            <div className="flex gap-2">
+              <Button
+                variant={sortConfig.field === 'saleDate' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('saleDate')}
+                className="flex items-center gap-1"
+              >
+                Fecha
+                {sortConfig.field === 'saleDate' && (
+                  <span className="text-xs">
+                    {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant={sortConfig.field === 'id' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('id')}
+                className="flex items-center gap-1"
+              >
+                ID
+                {sortConfig.field === 'id' && (
+                  <span className="text-xs">
+                    {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Content */}
@@ -236,7 +311,7 @@ const SalesPage: React.FC = () => {
             <Spinner size="lg" className="mx-auto" />
             <p className="mt-4 text-gray-600">Cargando ventas...</p>
           </div>
-        ) : filteredSales.length === 0 ? (
+        ) : filteredAndSortedSales.length === 0 ? (
           <div className="text-center py-12">
             <ShoppingCart size={64} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -265,11 +340,31 @@ const SalesPage: React.FC = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('id')}
+                    >
+                      <div className="flex items-center gap-1">
+                        ID
+                        {sortConfig.field === 'id' && (
+                          <span className="text-primary-600">
+                            {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('saleDate')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Fecha
+                        {sortConfig.field === 'saleDate' && (
+                          <span className="text-primary-600">
+                            {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                          </span>
+                        )}
+                      </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Cliente
@@ -283,7 +378,7 @@ const SalesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredSales.map((sale) => (
+                  {filteredAndSortedSales.map((sale) => (
                     <tr key={sale.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{sale.id}
@@ -327,7 +422,7 @@ const SalesPage: React.FC = () => {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-4">
-              {filteredSales.map((sale) => (
+              {filteredAndSortedSales.map((sale) => (
                 <div key={sale.id} className="bg-white border rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div>
