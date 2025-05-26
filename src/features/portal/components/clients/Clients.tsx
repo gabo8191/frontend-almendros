@@ -20,20 +20,37 @@ const Clients: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
+  const [processingClientId, setProcessingClientId] = useState<number | null>(null);
   const { showToast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === Role.ADMINISTRATOR;
 
-  const fetchClients = async (page = currentPage) => {
+  // Debug logging for user role
+  useEffect(() => {
+    console.log('=== USER ROLE DEBUG ===');
+    console.log('Current user:', user);
+    console.log('User role:', user?.role);
+    console.log('Role.ADMINISTRATOR:', Role.ADMINISTRATOR);
+    console.log('Is admin:', isAdmin);
+    console.log('=== END USER DEBUG ===');
+  }, [user, isAdmin]);
+
+  const fetchClients = async (page: number) => {
     try {
       setIsLoading(true);
-      const response = await clientService.getClients(page, 10);
+      
+      const filters: any = {};
+      if (searchTerm.trim()) {
+        filters.search = searchTerm.trim();
+      }
+      
+      const response = await clientService.getClients(page, 10, filters);
       setClients(response.data);
       setTotalPages(response.meta.totalPages);
       setTotalClients(response.meta.total);
-      setCurrentPage(response.meta.page);
-    } catch (error) {
-      showToast('error', 'Error al cargar los clientes');
+    } catch (error: any) {
+      console.error('Error fetching clients:', error);
+      showToast('error', `Error al cargar los clientes: ${error.response?.data?.message || error.message}`);
       setClients([]);
     } finally {
       setIsLoading(false);
@@ -41,13 +58,12 @@ const Clients: React.FC = () => {
   };
 
   useEffect(() => {
+    setCurrentPage(1);
     fetchClients(1);
-  }, []);
+  }, [searchTerm]);
 
   useEffect(() => {
-    if (currentPage > 1) {
-      fetchClients(currentPage);
-    }
+    fetchClients(currentPage);
   }, [currentPage]);
 
   const handleEditClick = (client: Client) => {
@@ -60,16 +76,51 @@ const Clients: React.FC = () => {
   };
 
   const handleToggleStatus = async (client: Client) => {
+    console.log('=== TOGGLE STATUS DEBUG ===');
+    console.log('Client to toggle:', client);
+    console.log('Current isActive:', client.isActive);
+    console.log('Target isActive:', !client.isActive);
+    console.log('User is admin:', isAdmin);
+    console.log('User object:', user);
+    console.log('=== END TOGGLE DEBUG ===');
+
     if (!isAdmin) {
       showToast('error', 'No tienes permisos para cambiar el estado de los clientes');
       return;
     }
+
     try {
+      setProcessingClientId(client.id);
+      
       await clientService.toggleClientStatus(client.id, !client.isActive);
+      
       showToast('success', `Cliente ${client.isActive ? 'desactivado' : 'activado'} exitosamente`);
       fetchClients(currentPage);
-    } catch (error) {
-      showToast('error', 'Error al cambiar el estado del cliente');
+    } catch (error: any) {
+      console.error('=== TOGGLE STATUS ERROR ===');
+      console.error('Full error object:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error response status:', error.response?.status);
+      console.error('Error response headers:', error.response?.headers);
+      console.error('Error config:', error.config);
+      console.error('=== END TOGGLE ERROR ===');
+
+      let errorMessage = 'Error al cambiar el estado del cliente';
+      
+      if (error.response?.status === 403) {
+        errorMessage = 'No tienes permisos para realizar esta acción. Contacta al administrador.';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showToast('error', errorMessage);
+    } finally {
+      setProcessingClientId(null);
     }
   };
 
@@ -78,28 +129,20 @@ const Clients: React.FC = () => {
   };
 
   const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
       setCurrentPage(newPage);
     }
   };
 
   const handleClientCreated = () => {
     setIsNewClientModalOpen(false);
-    fetchClients(1); // Refresh and go to first page
     setCurrentPage(1);
+    fetchClients(1);
     showToast('success', 'Cliente creado exitosamente');
   };
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.documentNumber.includes(searchTerm)
-  );
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h1>
@@ -129,7 +172,6 @@ const Clients: React.FC = () => {
       </div>
 
       <Card>
-        {/* Search */}
         <div className="mb-6">
           <Input
             icon={<Search size={18} />}
@@ -139,13 +181,12 @@ const Clients: React.FC = () => {
           />
         </div>
 
-        {/* Content */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Cargando clientes...</p>
           </div>
-        ) : filteredClients.length === 0 ? (
+        ) : clients.length === 0 ? (
           <div className="text-center py-12">
             <User size={64} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -168,7 +209,6 @@ const Clients: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -190,7 +230,7 @@ const Clients: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map((client) => (
+                  {clients.map((client) => (
                     <tr key={client.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -236,8 +276,12 @@ const Clients: React.FC = () => {
                               size="sm"
                               icon={client.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
                               onClick={() => handleToggleStatus(client)}
+                              disabled={processingClientId === client.id}
                             >
-                              {client.isActive ? 'Desactivar' : 'Activar'}
+                              {processingClientId === client.id 
+                                ? 'Procesando...' 
+                                : client.isActive ? 'Desactivar' : 'Activar'
+                              }
                             </Button>
                           </div>
                         </td>
@@ -248,9 +292,8 @@ const Clients: React.FC = () => {
               </table>
             </div>
 
-            {/* Mobile Cards */}
             <div className="md:hidden space-y-4">
-              {filteredClients.map((client) => (
+              {clients.map((client) => (
                 <div key={client.id} className="bg-white border rounded-lg p-4 shadow-sm">
                   <div className="flex items-center mb-3">
                     <div className="flex-shrink-0 h-10 w-10">
@@ -293,8 +336,12 @@ const Clients: React.FC = () => {
                         size="sm"
                         icon={client.isActive ? <UserX size={14} /> : <UserCheck size={14} />}
                         onClick={() => handleToggleStatus(client)}
+                        disabled={processingClientId === client.id}
                       >
-                        {client.isActive ? 'Desactivar' : 'Activar'}
+                        {processingClientId === client.id 
+                          ? 'Procesando...' 
+                          : client.isActive ? 'Desactivar' : 'Activar'
+                        }
                       </Button>
                     </div>
                   )}
@@ -302,7 +349,6 @@ const Clients: React.FC = () => {
               ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center mt-8 space-x-2">
                 <Button
@@ -347,7 +393,6 @@ const Clients: React.FC = () => {
         )}
       </Card>
 
-      {/* Edit Client Modal */}
       {selectedClient && isAdmin && (
         <EditClientModal
           isOpen={isEditModalOpen}
@@ -363,29 +408,26 @@ const Clients: React.FC = () => {
               fetchClients(currentPage);
               setIsEditModalOpen(false);
               setSelectedClient(null);
-            } catch (error) {
-              showToast('error', 'Error al actualizar el cliente');
+              return true;
+            } catch (error: any) {
+              showToast('error', `Error al actualizar el cliente: ${error.response?.data?.message || error.message}`);
+              return false;
             }
           }}
         />
       )}
 
-      {/* New Client Modal */}
       {isNewClientModalOpen && (
         <NewClientModal
           isOpen={isNewClientModalOpen}
           onClose={() => setIsNewClientModalOpen(false)}
           onSave={async (clientData) => {
             try {
-              const newClient = await clientService.createClient(clientData);
-              // Add the new client to the current list if we're on the first page
-              if (currentPage === 1) {
-                setClients(prevClients => [newClient, ...prevClients]);
-              }
+              await clientService.createClient(clientData);
               handleClientCreated();
               return true;
-            } catch (error) {
-              showToast('error', 'Error al crear el cliente');
+            } catch (error: any) {
+              showToast('error', `Error al crear el cliente: ${error.response?.data?.message || error.message}`);
               return false;
             }
           }}

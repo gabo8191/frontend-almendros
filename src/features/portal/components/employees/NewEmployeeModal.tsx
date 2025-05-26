@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { X, Mail, User, Phone, MapPin, Lock, Check, AlertCircle } from 'lucide-react';
+import { X, Mail, User, Phone, MapPin, Lock } from 'lucide-react';
 import { Role } from '../../../auth/types';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import { 
-  createEmployeeSchema, 
-  type CreateEmployeeFormData,
+  CreateEmployeeFormData,
+  createEmployeeSchema,
+  validatePassword,
   getPasswordRequirements,
-  validatePassword 
+  formatPhoneNumber
 } from '../../schemas/employee.schema';
+import { getRecommendedEmailDomains } from '../../../../shared/constants';
+import { z } from 'zod';
 
 interface NewEmployeeModalProps {
   isOpen: boolean;
@@ -43,96 +46,140 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  const validateForm = () => {
+  const resetForm = () => {
+    setFormData({
+      email: '',
+      password: '',
+      confirmPassword: '',
+      firstName: '',
+      lastName: '',
+      role: Role.SALESPERSON,
+      phoneNumber: '',
+      address: '',
+    });
+    setErrors({});
+  };
+
+  const validateForm = (): boolean => {
     try {
-      createEmployeeSchema.parse(formData);
+      // Formatear el teléfono antes de validar
+      const dataToValidate = {
+        ...formData,
+        phoneNumber: formData.phoneNumber ? formatPhoneNumber(formData.phoneNumber) : formData.phoneNumber,
+      };
+      
+      createEmployeeSchema.parse(dataToValidate);
       setErrors({});
       return true;
-    } catch (error: any) {
-      const newErrors: Record<string, string> = {};
-      
-      if (error.errors) {
-        error.errors.forEach((err: any) => {
-          const field = err.path[0];
-          if (field && !newErrors[field]) {
-            newErrors[field] = err.message;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path.length > 0) {
+            newErrors[err.path[0]] = err.message;
           }
         });
+        setErrors(newErrors);
+        return false;
       }
-      
-      setErrors(newErrors);
       return false;
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phoneNumber: value });
+    
+    if (errors.phoneNumber) {
+      setErrors({ ...errors, phoneNumber: '' });
+    }
+  };
+
+  const handlePhoneBlur = () => {
+    if (formData.phoneNumber && !formData.phoneNumber.startsWith('+')) {
+      const formatted = formatPhoneNumber(formData.phoneNumber);
+      setFormData({ ...formData, phoneNumber: formatted });
+    }
+  };
+
+  const handleInputChange = (field: keyof CreateEmployeeFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+    
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form data before validation:', formData); // Debug
+    
     if (!validateForm()) {
+      console.log('Validation failed with errors:', errors); // Debug
       return;
     }
 
     setIsSubmitting(true);
     
-    // Preparar datos para enviar al servidor
     const { confirmPassword, ...submitData } = formData;
     
     const cleanData: any = {
-      email: submitData.email,
+      email: submitData.email.trim().toLowerCase(),
       password: submitData.password,
-      firstName: submitData.firstName,
-      lastName: submitData.lastName,
+      firstName: submitData.firstName.trim(),
+      lastName: submitData.lastName.trim(),
       role: submitData.role,
     };
 
     // Solo agregar campos opcionales si tienen valor
     if (submitData.phoneNumber && submitData.phoneNumber.trim() !== '') {
-      cleanData.phoneNumber = submitData.phoneNumber.trim();
+      cleanData.phoneNumber = formatPhoneNumber(submitData.phoneNumber.trim());
     }
 
     if (submitData.address && submitData.address.trim() !== '') {
       cleanData.address = submitData.address.trim();
     }
 
+    console.log('Sending data to server:', cleanData); // Debug
+
     try {
       await onSave(cleanData);
       onClose();
-      // Resetear el formulario
-      setFormData({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        firstName: '',
-        lastName: '',
-        role: Role.SALESPERSON,
-        phoneNumber: '',
-        address: '',
-      });
-      setErrors({});
+      resetForm();
     } catch (error: any) {
       console.error('Error creating employee:', error);
       
-      // Mostrar errores específicos del servidor si están disponibles
+      let errorMessage = 'Error al crear el empleado. Por favor, inténtalo de nuevo.';
+      
       if (error.response?.data?.details) {
-        const serverErrors: Record<string, string> = {};
-        error.response.data.details.forEach((detail: string) => {
-          if (detail.toLowerCase().includes('password')) {
-            serverErrors.password = detail;
-          }
-          if (detail.toLowerCase().includes('email')) {
-            serverErrors.email = detail;
-          }
-        });
-        setErrors(serverErrors);
+        errorMessage = error.response.data.details.join(', ');
+      } else if (error.response?.data?.message) {
+        if (Array.isArray(error.response.data.message)) {
+          errorMessage = error.response.data.message.join('. ');
+        } else {
+          errorMessage = error.response.data.message;
+        }
       }
+      
+      setErrors({ 
+        submit: errorMessage
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Obtener errores específicos de contraseña para mostrar los requisitos
-  const passwordErrors = validatePassword(formData.password);
+  const handleClose = () => {
+    onClose();
+    resetForm();
+  };
+
   const passwordRequirements = getPasswordRequirements();
+  const passwordErrors = validatePassword(formData.password);
 
   if (!isOpen) return null;
 
@@ -142,7 +189,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Nuevo Empleado</h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-500 transition-colors"
           >
             <X size={24} />
@@ -150,49 +197,83 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
+          {errors.submit && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {errors.submit}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Nombre"
               value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              onChange={handleInputChange('firstName')}
               error={errors.firstName}
               icon={<User size={18} />}
               required
+              placeholder="Nombre del empleado"
             />
             <Input
               label="Apellido"
               value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              onChange={handleInputChange('lastName')}
               error={errors.lastName}
               icon={<User size={18} />}
               required
+              placeholder="Apellido del empleado"
             />
           </div>
 
-          <Input
-            label="Correo Electrónico"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            error={errors.email}
-            icon={<Mail size={18} />}
-            required
-          />
+          <div>
+            <Input
+              label="Correo Electrónico"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange('email')}
+              error={errors.email}
+              icon={<Mail size={18} />}
+              required
+              placeholder="correo@empresa.com"
+            />
+            {errors.email && errors.email.includes('temporales') && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm font-medium mb-2">
+                  Sugerencias de correos válidos:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {getRecommendedEmailDomains().slice(0, 6).map((domain) => (
+                    <span 
+                      key={domain}
+                      className="text-blue-600 text-xs bg-blue-100 px-2 py-1 rounded cursor-pointer hover:bg-blue-200"
+                      onClick={() => {
+                        const emailPart = formData.email.split('@')[0];
+                        if (emailPart) {
+                          setFormData({ ...formData, email: `${emailPart}@${domain}` });
+                        }
+                      }}
+                    >
+                      @{domain}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="mb-4">
             <Input
               label="Contraseña"
               type="password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={handleInputChange('password')}
               onFocus={() => setPasswordFocused(true)}
               onBlur={() => setPasswordFocused(false)}
               error={errors.password}
               icon={<Lock size={18} />}
               required
+              placeholder="Contraseña segura"
             />
             
-            {/* Requisitos de contraseña */}
             {(passwordFocused || formData.password.length > 0) && (
               <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
                 <p className="text-sm font-medium text-gray-700 mb-2">
@@ -200,18 +281,11 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                 </p>
                 <div className="space-y-1">
                   {passwordRequirements.map((requirement, index) => {
-                    const isValid = !passwordErrors.some(error => 
-                      requirement.toLowerCase().includes(error.toLowerCase()) ||
-                      error.toLowerCase().includes(requirement.toLowerCase())
-                    );
+                    const isValid = !passwordErrors.includes(requirement);
                     
                     return (
                       <div key={index} className="flex items-center text-sm">
-                        {isValid ? (
-                          <Check size={14} className="text-green-500 mr-2" />
-                        ) : (
-                          <AlertCircle size={14} className="text-gray-400 mr-2" />
-                        )}
+                        <span className={`w-2 h-2 rounded-full mr-2 ${isValid ? 'bg-green-500' : 'bg-gray-300'}`} />
                         <span className={isValid ? 'text-green-700' : 'text-gray-600'}>
                           {requirement}
                         </span>
@@ -227,43 +301,56 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
             label="Confirmar Contraseña"
             type="password"
             value={formData.confirmPassword}
-            onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+            onChange={handleInputChange('confirmPassword')}
             error={errors.confirmPassword}
             icon={<Lock size={18} />}
             required
+            placeholder="Confirmar contraseña"
           />
 
-          <Input
-            label="Teléfono (opcional)"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            icon={<Phone size={18} />}
-          />
+          <div>
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={formData.phoneNumber || ''}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              error={errors.phoneNumber}
+              icon={<Phone size={18} />}
+              placeholder="+573001234567"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Formato internacional requerido (ej: +573001234567). Campo opcional.
+            </p>
+          </div>
 
           <Input
-            label="Dirección (opcional)"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            label="Dirección"
+            value={formData.address || ''}
+            onChange={handleInputChange('address')}
             icon={<MapPin size={18} />}
+            placeholder="Calle 123 #45-67, Ciudad"
           />
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rol
+              Rol *
             </label>
             <select
               value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+              onChange={handleInputChange('role')}
               className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             >
               <option value={Role.SALESPERSON}>Vendedor</option>
               <option value={Role.ADMINISTRATOR}>Administrador</option>
             </select>
+            {errors.role && (
+              <p className="mt-1 text-sm text-red-600">{errors.role}</p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
               Cancelar
             </Button>
             <Button type="submit" isLoading={isSubmitting}>

@@ -1,8 +1,15 @@
 import React, { useState } from 'react';
+import { Mail, User, Phone, MapPin, FileText, Building } from 'lucide-react';
 import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import { Supplier } from '../../api/supplierService';
+import { 
+  SupplierFormData, 
+  validateSupplierForm, 
+  formatPhoneNumber,
+  getRecommendedEmailDomains
+} from '../../schemas/supplier.schema';
 
 interface NewSupplierModalProps {
   isOpen: boolean;
@@ -13,7 +20,7 @@ interface NewSupplierModalProps {
     email: string;
     phoneNumber: string;
     address: string;
-    documentType: 'CC' | 'TI';
+    documentType: 'CC' | 'TI' | 'NIT' | 'CE' | 'PP';
     documentNumber: string;
   }) => Promise<boolean>;
 }
@@ -23,208 +30,250 @@ const NewSupplierModal: React.FC<NewSupplierModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<SupplierFormData>({
     name: '',
     contactName: '',
     email: '',
     phoneNumber: '',
     address: '',
-    documentType: 'CC' as Supplier['documentType'],
+    documentType: 'NIT',
     documentNumber: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      contactName: '',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      documentType: 'NIT',
+      documentNumber: '',
+    });
+    setErrors({});
+  };
 
-    const name = formData.name.trim();
-    const contactName = formData.contactName.trim();
-    const email = formData.email.trim();
-    const documentNumber = formData.documentNumber.trim();
-    const phoneNumber = formData.phoneNumber.trim();
-
-    if (!name) {
-      newErrors.name = 'El nombre es requerido';
-    } else if (name.length < 2) {
-      newErrors.name = 'El nombre debe tener al menos 2 caracteres';
-    } else if (name.length > 100) {
-      newErrors.name = 'El nombre no puede exceder 100 caracteres';
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phoneNumber: value });
+    
+    // Limpiar error de teléfono si existe
+    if (errors.phoneNumber) {
+      setErrors({ ...errors, phoneNumber: '' });
     }
+  };
 
-    if (!contactName) {
-      newErrors.contactName = 'El nombre de contacto es requerido';
-    } else if (contactName.length < 2) {
-      newErrors.contactName = 'El nombre de contacto debe tener al menos 2 caracteres';
-    } else if (contactName.length > 100) {
-      newErrors.contactName = 'El nombre de contacto no puede exceder 100 caracteres';
+  const handlePhoneBlur = () => {
+    if (formData.phoneNumber && !formData.phoneNumber.startsWith('+')) {
+      const formatted = formatPhoneNumber(formData.phoneNumber);
+      setFormData({ ...formData, phoneNumber: formatted });
     }
+  };
 
-    if (!email) {
-      newErrors.email = 'El correo electrónico es requerido';
-    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
-      newErrors.email = 'Correo electrónico inválido';
+  const handleInputChange = (field: keyof SupplierFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+    
+    // Limpiar error del campo si existe
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
     }
-
-    if (!documentNumber) {
-      newErrors.documentNumber = 'El número de documento es requerido';
-    } else if (formData.documentType === 'CC') {
-      if (!/^\d{6,10}$/.test(documentNumber)) {
-        newErrors.documentNumber = 'Formato de CC inválido';
-      }
-    } else if (formData.documentType === 'TI') {
-      if (!/^\d{10,11}$/.test(documentNumber)) {
-        newErrors.documentNumber = 'Formato de TI inválido';
-      }
-    }
-
-    if (phoneNumber && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,7}$/.test(phoneNumber)) {
-      newErrors.phoneNumber = 'Formato de teléfono inválido';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setServerError(null);
     
-    if (!validateForm()) {
+    // Validar con Zod
+    const validation = validateSupplierForm(formData);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
-    const cleanedData = {
-      ...formData,
+    // Preparar datos finales con formateo
+    const finalData = {
       name: formData.name.trim(),
       contactName: formData.contactName.trim(),
-      email: formData.email.trim(),
-      phoneNumber: formData.phoneNumber.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phoneNumber: formatPhoneNumber(formData.phoneNumber),
       address: formData.address.trim(),
+      documentType: formData.documentType as any,
       documentNumber: formData.documentNumber.trim(),
     };
 
-    console.log('Submitting supplier data:', cleanedData);
+    console.log('Creating new supplier with data:', finalData);
 
     setIsSubmitting(true);
     try {
-      const success = await onSave(cleanedData);
+      const success = await onSave(finalData);
       if (success) {
         onClose();
-        setFormData({
-          name: '',
-          contactName: '',
-          email: '',
-          phoneNumber: '',
-          address: '',
-          documentType: 'CC',
-          documentNumber: '',
-        });
+        resetForm();
       }
-    } catch (error) {
-      console.error('Error in form submission:', error);
+    } catch (error: any) {
+      console.error('Error creating supplier:', error);
       
-      if (error.response && error.response.data) {
-        console.log('Error response data:', error.response.data);
-        
-        if (error.response.data.message) {
-          if (Array.isArray(error.response.data.message)) {
-            setServerError(error.response.data.message.join('. '));
-          } else {
-            setServerError(error.response.data.message);
-          }
-        } else if (error.response.data.error) {
-          setServerError(`${error.response.data.error}: ${error.response.data.statusCode}`);
+      let errorMessage = 'Error al crear el proveedor. Por favor, inténtalo de nuevo.';
+      
+      if (error.response?.data?.details) {
+        errorMessage = error.response.data.details.join(', ');
+      } else if (error.response?.data?.message) {
+        if (Array.isArray(error.response.data.message)) {
+          errorMessage = error.response.data.message.join('. ');
         } else {
-          setServerError('Error al crear el proveedor. Por favor intente de nuevo.');
+          errorMessage = error.response.data.message;
         }
-      } else {
-        setServerError('Error de conexión. Por favor verifique su conexión a internet.');
       }
+      
+      setErrors({ 
+        submit: errorMessage
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleClose = () => {
+    onClose();
+    resetForm();
+  };
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Nuevo Proveedor"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {serverError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
-            {serverError}
+        {/* Show general error if exists */}
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
           </div>
         )}
-        
+
         <Input
           label="Nombre de la Empresa"
           value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          onChange={handleInputChange('name')}
           error={errors.name}
+          icon={<Building size={18} />}
           required
+          placeholder="Nombre de la empresa"
         />
 
         <Input
           label="Nombre del Contacto"
           value={formData.contactName}
-          onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+          onChange={handleInputChange('contactName')}
           error={errors.contactName}
+          icon={<User size={18} />}
           required
+          placeholder="Nombre del contacto principal"
         />
 
-        <Input
-          label="Correo Electrónico"
-          type="email"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          error={errors.email}
-          required
-        />
+        <div>
+          <Input
+            label="Correo Electrónico"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange('email')}
+            error={errors.email}
+            icon={<Mail size={18} />}
+            required
+            placeholder="correo@empresa.com"
+          />
+          {errors.email && errors.email.includes('temporales') && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm font-medium mb-2">
+                Sugerencias de correos válidos:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {getRecommendedEmailDomains().slice(0, 6).map((domain) => (
+                  <span 
+                    key={domain}
+                    className="text-blue-600 text-xs bg-blue-100 px-2 py-1 rounded cursor-pointer hover:bg-blue-200"
+                    onClick={() => {
+                      const emailPart = formData.email.split('@')[0];
+                      if (emailPart) {
+                        setFormData({ ...formData, email: `${emailPart}@${domain}` });
+                      }
+                    }}
+                  >
+                    @{domain}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Documento
+              Tipo de Documento *
             </label>
             <select
               value={formData.documentType}
-              onChange={(e) => setFormData({ ...formData, documentType: e.target.value as Supplier['documentType'] })}
+              onChange={handleInputChange('documentType')}
               className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             >
+              <option value="NIT">NIT</option>
               <option value="CC">Cédula de Ciudadanía</option>
+              <option value="CE">Cédula de Extranjería</option>
               <option value="TI">Tarjeta de Identidad</option>
+              <option value="PP">Pasaporte</option>
             </select>
+            {errors.documentType && (
+              <p className="mt-1 text-sm text-red-600">{errors.documentType}</p>
+            )}
           </div>
 
           <Input
             label="Número de Documento"
             value={formData.documentNumber}
-            onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
+            onChange={handleInputChange('documentNumber')}
             error={errors.documentNumber}
+            icon={<FileText size={18} />}
             required
+            placeholder="123456789"
           />
         </div>
 
-        <Input
-          label="Teléfono"
-          type="tel"
-          value={formData.phoneNumber}
-          onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-          error={errors.phoneNumber}
-        />
+        <div>
+          <Input
+            label="Teléfono"
+            type="tel"
+            value={formData.phoneNumber}
+            onChange={handlePhoneChange}
+            onBlur={handlePhoneBlur}
+            error={errors.phoneNumber}
+            icon={<Phone size={18} />}
+            required
+            placeholder="+573001234567"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            Formato internacional requerido (ej: +573001234567)
+          </p>
+        </div>
 
         <Input
           label="Dirección"
           value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+          onChange={handleInputChange('address')}
+          error={errors.address}
+          icon={<MapPin size={18} />}
+          required
+          placeholder="Calle 123 #45-67, Ciudad"
         />
 
         <div className="flex justify-end space-x-3 mt-6">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancelar
           </Button>
           <Button type="submit" isLoading={isSubmitting}>
