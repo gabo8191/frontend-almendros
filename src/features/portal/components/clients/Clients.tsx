@@ -54,9 +54,10 @@ const Clients: React.FC = () => {
       return;
     }
     try {
+      // This will now use the updated service logic with proper endpoints
       await clientService.toggleClientStatus(client.id, !client.isActive);
       showToast('success', `Cliente ${client.isActive ? 'desactivado' : 'activado'} exitosamente`);
-      fetchClients();
+      fetchClients(); // Refresh the list
     } catch (error) {
       showToast('error', 'Error al cambiar el estado del cliente');
     }

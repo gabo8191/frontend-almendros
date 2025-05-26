@@ -47,11 +47,11 @@ export const employeeService = {
 
   toggleEmployeeStatus: async (id: string, isActive: boolean): Promise<User> => {
     if (isActive) {
-      // Use the new PATCH endpoint for activation
-      const response = await api.patch<{ message: string; user: User }>(`/auth/users/${id}/activate`);
+      // ✅ Corregido: usar POST en lugar de PATCH para activación
+      const response = await api.post<{ message: string; user: User }>(`/auth/users/${id}/activate`);
       return response.data.user;
     } else {
-      // Continue using DELETE for deactivation
+      // ✅ Mantener DELETE para desactivación
       const response = await api.delete<{ message: string; user: User }>(`/auth/users/${id}`);
       return response.data.user;
     }
