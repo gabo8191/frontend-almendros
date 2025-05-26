@@ -14,7 +14,7 @@ import Settings from '../features/portal/components/settings/Settings';
 import Dashboard from '../features/portal/components/dashboard/Dashboard';
 import SalesPage from '../features/portal/components/sales/SalesPage';
 import InventoryMovements from '../features/portal/components/inventory/InventoryMovements';
-import InventoryReports from '../features/portal/components/reports/InventoryReports';
+import InventoryReports from '../features/portal/components/reports/Reports';
 import SuppliersPage from '../features/portal/components/suppliers/SuppliersPage';
 
 const AppRoutes: React.FC = () => {

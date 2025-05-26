@@ -30,7 +30,7 @@ export interface SalesReportData {
 }
 
 export const inventoryReportService = {
-  // Reportes de Inventario
+  // Reportes de Inventario - Solo endpoint paginado
   getInventoryReport: async (filters?: {
     minStock?: number;
     maxStock?: number;
@@ -56,7 +56,7 @@ export const inventoryReportService = {
 
         const response = await api.get<InventoryReportData[]>(`/inventory-reports/inventory/paginated?${params}`);
         
-        // Asegurar que la respuesta sea un array
+        // Asegurar que la respuesta sea un array (igual que en ventas)
         let inventoryData: InventoryReportData[] = [];
         if (Array.isArray(response.data)) {
           inventoryData = response.data;
@@ -87,7 +87,6 @@ export const inventoryReportService = {
     try {
       const response = await api.get<SalesReportData[]>('/sales/reports/full');
       
-      // Asegurar que la respuesta sea un array
       if (Array.isArray(response.data)) {
         return response.data;
       } else if (response.data && typeof response.data === 'object' && 'data' in response.data) {
@@ -133,7 +132,6 @@ export const inventoryReportService = {
 
         const response = await api.get<SalesReportData[]>(`/sales/reports/paginated?${params}`);
         
-        // Asegurar que la respuesta sea un array
         let salesData: SalesReportData[] = [];
         if (Array.isArray(response.data)) {
           salesData = response.data;
@@ -170,7 +168,7 @@ export const inventoryReportService = {
       
       const exportData: ExportData = {
         title: 'Reporte de Inventario',
-        filename: `inventario_${new Date().toISOString().split('T')[0]}`,
+        filename: `inventario_${new Date().toISOString().split('T')[0]}`, // Corregido: añadido [0]
         headers: ['ID Producto', 'Producto', 'Stock Actual', 'Stock Mínimo', 'Stock Máximo', 'Precio Unitario', 'Valor Total', 'Categoría', 'Último Movimiento'],
         data: data.map(item => [
           item.productId,
@@ -250,7 +248,6 @@ export const inventoryReportService = {
         data = await inventoryReportService.getSalesReportFull();
       }
       
-      // Verificación robusta de que data es un array
       if (!Array.isArray(data)) {
         console.error('Data is not an array:', data);
         throw new Error('Error en el formato de datos recibidos del servidor');
