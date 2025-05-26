@@ -7,7 +7,7 @@ export interface Supplier {
   email: string;
   phoneNumber: string;
   address: string;
-  documentType: 'CC' | 'TI';
+  documentType: 'NIT' | 'CC' | 'CE' | 'PP' | 'TI';
   documentNumber: string;
   isActive: boolean;
   createdAt: string;
@@ -33,7 +33,7 @@ interface CreateSupplierData {
   email: string;
   phoneNumber: string;
   address: string;
-  documentType: 'CC' | 'TI';
+  documentType: 'NIT' | 'CC' | 'CE' | 'PP' | 'TI';
   documentNumber: string;
 }
 
@@ -158,7 +158,7 @@ export const supplierService = {
   activateSupplier: async (id: number): Promise<void> => {
     try {
       console.log(`Activating supplier ${id}`);
-      await api.put(`/suppliers/${id}/activate`);
+      await api.patch(`/suppliers/${id}/activate`);
       console.log(`Supplier ${id} activated successfully`);
     } catch (error) {
       console.error(`API error in activateSupplier(${id}):`, error);
