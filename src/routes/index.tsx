@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '../features/auth/context/AuthContext';
 import { ToastProvider } from '../shared/context/ToastContext';
 import ProtectedRoute from './ProtectedRoute';
+import ConditionalHome from './ConditionalHome';
+import AuthenticatedRoute from './AuthenticatedRoute';
 
-import LandingPage from '../pages/landing/LandingPage';
-import LoginPage from '../pages/login/LoginPage';
 import Portal from '../pages/portal/Portal';
 import POSSystem from '../features/portal/components/products/Products';
 import Employees from '../features/portal/components/employees/Employees';
@@ -22,8 +22,8 @@ const AppRoutes: React.FC = () => {
       <ToastProvider>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<ConditionalHome />} />
+            <Route path="/login" element={<AuthenticatedRoute />} />
             
             <Route element={<ProtectedRoute />}>
               <Route path="/portal" element={<Portal />}>

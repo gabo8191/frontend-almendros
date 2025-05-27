@@ -39,11 +39,19 @@ export const useDashboard = () => {
       setStats(prev => ({ ...prev, isLoading: true }));
 
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
       
+      const todayStart = new Date(today);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartStr = todayStart.toISOString();
+      
+      const todayEnd = new Date(today);
+      todayEnd.setHours(23, 59, 59, 999);
+      const todayEndStr = todayEnd.toISOString();
+
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay() + 1);
-      const weekStartStr = weekStart.toISOString().split('T')[0];
+      weekStart.setHours(0, 0, 0, 0);
+      const weekStartStr = weekStart.toISOString();
 
       const [
         todaySalesResponse,
@@ -52,8 +60,14 @@ export const useDashboard = () => {
         clientsResponse,
         recentSalesResponse,
       ] = await Promise.all([
-        saleService.getSales(1, 100, { startDate: todayStr, endDate: todayStr }),
-        saleService.getSales(1, 100, { startDate: weekStartStr, endDate: todayStr }),
+        saleService.getSales(1, 100, { 
+          startDate: todayStartStr, 
+          endDate: todayEndStr 
+        }),
+        saleService.getSales(1, 100, { 
+          startDate: weekStartStr, 
+          endDate: todayEndStr 
+        }),
         productService.getProducts(1, 1),
         clientService.getClients(1, 1),
         saleService.getSales(1, 5),
