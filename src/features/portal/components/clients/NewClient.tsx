@@ -54,7 +54,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
     const value = e.target.value;
     setFormData({ ...formData, phoneNumber: value });
     
-    // Limpiar error de teléfono si existe
     if (errors.phoneNumber) {
       setErrors({ ...errors, phoneNumber: '' });
     }
@@ -73,7 +72,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
     const value = e.target.value;
     setFormData({ ...formData, [field]: value });
     
-    // Limpiar error del campo si existe
     if (errors[field]) {
       setErrors({ ...errors, [field]: '' });
     }
@@ -82,7 +80,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar con Zod
     const validation = validateClientForm(formData);
     
     if (!validation.isValid) {
@@ -90,7 +87,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
       return;
     }
 
-    // Preparar datos finales con formateo
     const finalData = {
       name: formData.name.trim(),
       email: formData.email.trim().toLowerCase(),
@@ -100,8 +96,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
       documentNumber: formData.documentNumber.trim(),
     };
 
-    console.log('Creating new client with data:', finalData);
-
     setIsSubmitting(true);
     try {
       const success = await onSave(finalData);
@@ -110,8 +104,6 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
         resetForm();
       }
     } catch (error: any) {
-      console.error('Error creating client:', error);
-      
       let errorMessage = 'Error al crear el cliente. Por favor, inténtalo de nuevo.';
       
       if (error.response?.data?.details) {
@@ -120,9 +112,7 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
         errorMessage = error.response.data.message;
       }
       
-      setErrors({ 
-        submit: errorMessage
-      });
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -134,97 +124,94 @@ const NewClientModal: React.FC<NewClientModalProps> = ({
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      title="Nuevo Cliente"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Show general error if exists */}
+    <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Cliente" size="lg">
+      <form onSubmit={handleSubmit}>
         {errors.submit && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {errors.submit}
           </div>
         )}
 
-        <Input
-          label="Nombre Completo"
-          value={formData.name}
-          onChange={handleInputChange('name')}
-          error={errors.name}
-          icon={<User size={18} />}
-          required
-          placeholder="Ingresa el nombre completo"
-        />
+        <div className="space-y-4">
+          <Input
+            label="Nombre Completo"
+            value={formData.name}
+            onChange={handleInputChange('name')}
+            error={errors.name}
+            icon={<User size={18} />}
+            required
+            placeholder="Ingresa el nombre completo"
+          />
 
-        <Input
-          label="Correo Electrónico"
-          type="email"
-          value={formData.email}
-          onChange={handleInputChange('email')}
-          error={errors.email}
-          icon={<Mail size={18} />}
-          required
-          placeholder="ejemplo@correo.com"
-        />
+          <Input
+            label="Correo Electrónico"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange('email')}
+            error={errors.email}
+            icon={<Mail size={18} />}
+            required
+            placeholder="ejemplo@correo.com"
+          />
 
-        <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Documento *
+              </label>
+              <select
+                value={formData.documentType}
+                onChange={handleInputChange('documentType')}
+                className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              >
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="TI">Tarjeta de Identidad</option>
+                <option value="NIT">NIT</option>
+                <option value="PP">Pasaporte</option>
+              </select>
+              {errors.documentType && (
+                <p className="mt-1 text-sm text-red-600">{errors.documentType}</p>
+              )}
+            </div>
+
+            <Input
+              label="Número de Documento"
+              value={formData.documentNumber}
+              onChange={handleInputChange('documentNumber')}
+              error={errors.documentNumber}
+              icon={<FileText size={18} />}
+              required
+              placeholder="12345678"
+            />
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Documento *
-            </label>
-            <select
-              value={formData.documentType}
-              onChange={handleInputChange('documentType')}
-              className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            >
-              <option value="CC">Cédula de Ciudadanía</option>
-              <option value="CE">Cédula de Extranjería</option>
-              <option value="TI">Tarjeta de Identidad</option>
-              <option value="NIT">NIT</option>
-              <option value="PP">Pasaporte</option>
-            </select>
-            {errors.documentType && (
-              <p className="mt-1 text-sm text-red-600">{errors.documentType}</p>
-            )}
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={formData.phoneNumber || ''}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              error={errors.phoneNumber}
+              icon={<Phone size={18} />}
+              placeholder="+573001234567"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Formato internacional requerido (ej: +573001234567). Campo opcional.
+            </p>
           </div>
 
           <Input
-            label="Número de Documento"
-            value={formData.documentNumber}
-            onChange={handleInputChange('documentNumber')}
-            error={errors.documentNumber}
-            icon={<FileText size={18} />}
-            required
-            placeholder="12345678"
+            label="Dirección"
+            value={formData.address || ''}
+            onChange={handleInputChange('address')}
+            icon={<MapPin size={18} />}
+            placeholder="Calle 123 #45-67, Ciudad"
           />
         </div>
 
-        <div>
-          <Input
-            label="Teléfono"
-            type="tel"
-            value={formData.phoneNumber || ''}
-            onChange={handlePhoneChange}
-            onBlur={handlePhoneBlur}
-            error={errors.phoneNumber}
-            icon={<Phone size={18} />}
-            placeholder="+573001234567"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Formato internacional requerido (ej: +573001234567). Campo opcional.
-          </p>
-        </div>
-
-        <Input
-          label="Dirección"
-          value={formData.address || ''}
-          onChange={handleInputChange('address')}
-          icon={<MapPin size={18} />}
-          placeholder="Calle 123 #45-67, Ciudad"
-        />
-
-        <div className="flex justify-end space-x-3 mt-6">
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
           <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
             Cancelar
           </Button>
