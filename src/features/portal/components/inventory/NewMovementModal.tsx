@@ -41,6 +41,25 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
   const [isLoadingData, setIsLoadingData] = useState(false);
   const { showToast } = useToast();
 
+  // Opciones de razones según el tipo de movimiento
+  const getReasonOptions = () => {
+    if (type === 'ENTRY') {
+      return [
+        { value: 'PURCHASE', label: 'Compra' },
+        { value: 'RETURN', label: 'Devolución de Cliente' },
+        { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
+        { value: 'INITIAL_STOCK', label: 'Stock Inicial' },
+      ];
+    } else {
+      return [
+        { value: 'SALE', label: 'Venta' },
+        { value: 'DAMAGE', label: 'Producto Dañado' },
+        { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
+        { value: 'RETURN', label: 'Devolución a Proveedor' },
+      ];
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (isOpen) {
@@ -63,6 +82,20 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
     fetchData();
   }, [isOpen]);
 
+  // Resetear formulario cuando cambia el tipo
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        productId: '',
+        supplierId: '',
+        quantity: '',
+        reason: '',
+        notes: '',
+      });
+      setErrors({});
+    }
+  }, [isOpen, type]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -80,7 +113,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
     }
 
     if (!formData.reason) {
-      newErrors.reason = 'La razón es requerida';
+      newErrors.reason = 'Selecciona una razón';
     }
 
     setErrors(newErrors);
@@ -119,6 +152,8 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
     }
   };
 
+  const reasonOptions = getReasonOptions();
+
   return (
     <Modal
       isOpen={isOpen}
@@ -128,7 +163,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Producto
+            Producto *
           </label>
           <select
             value={formData.productId}
@@ -148,10 +183,31 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
           )}
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Razón del Movimiento *
+          </label>
+          <select
+            value={formData.reason}
+            onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+            className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          >
+            <option value="">Selecciona una razón</option>
+            {reasonOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {errors.reason && (
+            <p className="mt-1 text-sm text-red-600">{errors.reason}</p>
+          )}
+        </div>
+
         {type === 'ENTRY' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Proveedor
+              Proveedor *
             </label>
             <select
               value={formData.supplierId}
@@ -179,20 +235,15 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
           onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
           error={errors.quantity}
           required
-        />
-
-        <Input
-          label="Razón"
-          value={formData.reason}
-          onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-          error={errors.reason}
-          required
+          min="1"
+          step="1"
         />
 
         <Input
           label="Notas (opcional)"
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          placeholder="Información adicional sobre el movimiento"
         />
 
         <div className="flex justify-end space-x-3 mt-6">
