@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
-import { X, Mail, User, Phone, MapPin, Lock } from 'lucide-react';
+import React from 'react';
+import { Mail, User, Phone, MapPin, Lock } from 'lucide-react';
 import { Role } from '../../../auth/types';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
-import { 
-  CreateEmployeeFormData,
-  createEmployeeSchema,
-  validatePassword,
-  getPasswordRequirements,
-  formatPhoneNumber
-} from '../../schemas/employee.schema';
+import Modal from '../../../../shared/components/Modal';
 import { getRecommendedEmailDomains } from '../../../../shared/constants';
-import { z } from 'zod';
+import { useNewEmployeeForm } from './hooks/useNewEmployeeForm';
 
 interface NewEmployeeModalProps {
   isOpen: boolean;
@@ -32,177 +26,43 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [formData, setFormData] = useState<CreateEmployeeFormData>({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    role: Role.SALESPERSON,
-    phoneNumber: '',
-    address: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
-
-  const resetForm = () => {
-    setFormData({
-      email: '',
-      password: '',
-      confirmPassword: '',
-      firstName: '',
-      lastName: '',
-      role: Role.SALESPERSON,
-      phoneNumber: '',
-      address: '',
-    });
-    setErrors({});
-  };
-
-  const validateForm = (): boolean => {
-    try {
-      // Formatear el teléfono antes de validar
-      const dataToValidate = {
-        ...formData,
-        phoneNumber: formData.phoneNumber ? formatPhoneNumber(formData.phoneNumber) : formData.phoneNumber,
-      };
-      
-      createEmployeeSchema.parse(dataToValidate);
-      setErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path.length > 0) {
-            newErrors[err.path[0]] = err.message;
-          }
-        });
-        setErrors(newErrors);
-        return false;
-      }
-      return false;
-    }
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setFormData({ ...formData, phoneNumber: value });
-    
-    if (errors.phoneNumber) {
-      setErrors({ ...errors, phoneNumber: '' });
-    }
-  };
-
-  const handlePhoneBlur = () => {
-    if (formData.phoneNumber && !formData.phoneNumber.startsWith('+')) {
-      const formatted = formatPhoneNumber(formData.phoneNumber);
-      setFormData({ ...formData, phoneNumber: formatted });
-    }
-  };
-
-  const handleInputChange = (field: keyof CreateEmployeeFormData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const value = e.target.value;
-    setFormData({ ...formData, [field]: value });
-    
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: '' });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log('Form data before validation:', formData); // Debug
-    
-    if (!validateForm()) {
-      console.log('Validation failed with errors:', errors); // Debug
-      return;
-    }
-
-    setIsSubmitting(true);
-    
-    const { confirmPassword, ...submitData } = formData;
-    
-    const cleanData: any = {
-      email: submitData.email.trim().toLowerCase(),
-      password: submitData.password,
-      firstName: submitData.firstName.trim(),
-      lastName: submitData.lastName.trim(),
-      role: submitData.role,
-    };
-
-    // Solo agregar campos opcionales si tienen valor
-    if (submitData.phoneNumber && submitData.phoneNumber.trim() !== '') {
-      cleanData.phoneNumber = formatPhoneNumber(submitData.phoneNumber.trim());
-    }
-
-    if (submitData.address && submitData.address.trim() !== '') {
-      cleanData.address = submitData.address.trim();
-    }
-
-    console.log('Sending data to server:', cleanData); // Debug
-
-    try {
-      await onSave(cleanData);
-      onClose();
-      resetForm();
-    } catch (error: any) {
-      console.error('Error creating employee:', error);
-      
-      let errorMessage = 'Error al crear el empleado. Por favor, inténtalo de nuevo.';
-      
-      if (error.response?.data?.details) {
-        errorMessage = error.response.data.details.join(', ');
-      } else if (error.response?.data?.message) {
-        if (Array.isArray(error.response.data.message)) {
-          errorMessage = error.response.data.message.join('. ');
-        } else {
-          errorMessage = error.response.data.message;
-        }
-      }
-      
-      setErrors({ 
-        submit: errorMessage
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    passwordFocused,
+    setPasswordFocused,
+    passwordRequirements,
+    passwordErrors,
+    handlePhoneChange,
+    handlePhoneBlur,
+    handleInputChange,
+    handleSubmit,
+    resetForm,
+  } = useNewEmployeeForm();
 
   const handleClose = () => {
     onClose();
     resetForm();
   };
 
-  const passwordRequirements = getPasswordRequirements();
-  const passwordErrors = validatePassword(formData.password);
-
-  if (!isOpen) return null;
+  const onSubmit = async (e: React.FormEvent) => {
+    const success = await handleSubmit(e, onSave);
+    if (success) {
+      handleClose();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-apple-md w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Nuevo Empleado</h2>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Empleado" size="lg">
+      <form onSubmit={onSubmit}>
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {errors.submit && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-              {errors.submit}
-            </div>
-          )}
-
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Nombre"
@@ -248,7 +108,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
                       onClick={() => {
                         const emailPart = formData.email.split('@')[0];
                         if (emailPart) {
-                          setFormData({ ...formData, email: `${emailPart}@${domain}` });
+                          handleInputChange('email')({ target: { value: `${emailPart}@${domain}` } } as any);
                         }
                       }}
                     >
@@ -260,7 +120,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
             )}
           </div>
 
-          <div className="mb-4">
+          <div>
             <Input
               label="Contraseña"
               type="password"
@@ -332,7 +192,7 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
             placeholder="Calle 123 #45-67, Ciudad"
           />
 
-          <div className="mb-4">
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Rol *
             </label>
@@ -348,18 +208,18 @@ const NewEmployeeModal: React.FC<NewEmployeeModalProps> = ({
               <p className="mt-1 text-sm text-red-600">{errors.role}</p>
             )}
           </div>
+        </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Crear Empleado
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Crear Empleado
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

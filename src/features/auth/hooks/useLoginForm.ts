@@ -9,18 +9,21 @@ interface LoginForm {
   password: string;
 }
 
-type LoginFormErrors = z.inferFormattedError<typeof loginSchema>;
+type LoginFormErrors = Partial<Record<keyof LoginForm, string[]>>;
 
 export const useLoginForm = () => {
   const [formData, setFormData] = useState<LoginForm>({
     email: '',
     password: '',
   });
-  const [errors, setErrors] = useState<LoginFormErrors['fieldErrors']>({});
+  const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login } = useAuth()
   const navigate = useNavigate();
 
+  /**
+   * Validate form data using Zod schema
+   */
   const validateForm = (): boolean => {
     try {
       loginSchema.parse(formData);
@@ -28,21 +31,28 @@ export const useLoginForm = () => {
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        setErrors(error.format().fieldErrors);
+        const flattenedErrors = error.flatten();
+        setErrors(flattenedErrors.fieldErrors);
       }
       return false;
     }
   };
 
+  /**
+   * Handle input field changes and clear field-specific errors
+   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
     if (errors[name as keyof LoginForm]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+      setErrors((prev: LoginFormErrors) => ({ ...prev, [name]: undefined }));
     }
   };
 
+  /**
+   * Handle form submission with validation and authentication
+   */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -56,7 +66,7 @@ export const useLoginForm = () => {
       await login(formData.email, formData.password);
       navigate('/portal');
     } catch (error) {
-      console.error('Login failed:', error);
+      // Error handling is managed by AuthContext
     } finally {
       setIsSubmitting(false);
     }
