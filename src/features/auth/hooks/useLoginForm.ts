@@ -1,16 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { loginSchema } from '../schemas/auth.schema';
+import { z } from 'zod';
 
 interface LoginForm {
   email: string;
   password: string;
 }
 
-interface LoginFormErrors {
-  email?: string;
-  password?: string;
-}
+type LoginFormErrors = Partial<Record<keyof LoginForm, string[]>>;
 
 export const useLoginForm = () => {
   const [formData, setFormData] = useState<LoginForm>({
@@ -19,40 +18,41 @@ export const useLoginForm = () => {
   });
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login } = useAuth()
   const navigate = useNavigate();
 
+  /**
+   * Validate form data using Zod schema
+   */
   const validateForm = (): boolean => {
-    const newErrors: LoginFormErrors = {};
-    
-    // Email validation
-    if (!formData.email) {
-      newErrors.email = 'El correo electrónico es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Correo electrónico inválido';
+    try {
+      loginSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const flattenedErrors = error.flatten();
+        setErrors(flattenedErrors.fieldErrors);
+      }
+      return false;
     }
-    
-    // Password validation
-    if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Handle input field changes and clear field-specific errors
+   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     
-    // Clear the error for this field if it exists
-    if (errors[name as keyof LoginFormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (errors[name as keyof LoginForm]) {
+      setErrors((prev: LoginFormErrors) => ({ ...prev, [name]: undefined }));
     }
   };
 
+  /**
+   * Handle form submission with validation and authentication
+   */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -66,8 +66,7 @@ export const useLoginForm = () => {
       await login(formData.email, formData.password);
       navigate('/portal');
     } catch (error) {
-      console.error('Login failed:', error);
-      // Error is handled in the context
+      // Error handling is managed by AuthContext
     } finally {
       setIsSubmitting(false);
     }

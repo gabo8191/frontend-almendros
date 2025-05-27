@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
-import { X, Mail, User, Phone, MapPin, FileText } from 'lucide-react';
-import { Client } from '../../api/clientService';
+import { Mail, User, Phone, MapPin, FileText } from 'lucide-react';
+import { Client } from '../../api/client/clientService';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import Modal from '../../../../shared/components/Modal';
+import { 
+  ClientFormData, 
+  validateClientForm, 
+  formatPhoneNumber 
+} from '../../schemas/client.schema';
 
 interface EditClientModalProps {
   isOpen: boolean;
@@ -17,7 +23,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
   client,
   onSave,
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ClientFormData>({
     name: client.name,
     email: client.email,
     phoneNumber: client.phoneNumber,
@@ -28,62 +34,85 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.name) {
-      newErrors.name = 'El nombre es requerido';
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phoneNumber: value });
+    
+    if (errors.phoneNumber) {
+      setErrors({ ...errors, phoneNumber: '' });
     }
+  };
 
-    if (!formData.email) {
-      newErrors.email = 'El correo electrónico es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Correo electrónico inválido';
+  const handlePhoneBlur = () => {
+    if (formData.phoneNumber && !formData.phoneNumber.startsWith('+')) {
+      const formatted = formatPhoneNumber(formData.phoneNumber);
+      setFormData({ ...formData, phoneNumber: formatted });
     }
+  };
 
-    if (!formData.documentNumber) {
-      newErrors.documentNumber = 'El número de documento es requerido';
+  const handleInputChange = (field: keyof ClientFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+    
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const validation = validateClientForm(formData);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
+    const finalData = {
+      ...formData,
+      phoneNumber: formData.phoneNumber ? formatPhoneNumber(formData.phoneNumber) : formData.phoneNumber,
+      name: formData.name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      address: formData.address?.trim(),
+      documentNumber: formData.documentNumber.trim(),
+    };
+
     setIsSubmitting(true);
     try {
-      await onSave(formData);
+      await onSave(finalData);
+      onClose();
+    } catch (error: any) {
+      let errorMessage = 'Error al actualizar el cliente. Por favor, inténtalo de nuevo.';
+      
+      if (error.response?.data?.details) {
+        errorMessage = error.response.data.details.join(', ');
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-apple-md w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Editar Cliente</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Editar Cliente" size="lg">
+      <form onSubmit={handleSubmit}>
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <div className="space-y-4">
           <Input
             label="Nombre Completo"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={handleInputChange('name')}
             error={errors.name}
             icon={<User size={18} />}
             required
@@ -93,7 +122,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
             label="Correo Electrónico"
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={handleInputChange('email')}
             error={errors.email}
             icon={<Mail size={18} />}
             required
@@ -102,56 +131,68 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Documento
+                Tipo de Documento *
               </label>
               <select
                 value={formData.documentType}
-                onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
+                onChange={handleInputChange('documentType')}
                 className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
               >
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
+                <option value="TI">Tarjeta de Identidad</option>
                 <option value="NIT">NIT</option>
                 <option value="PP">Pasaporte</option>
               </select>
+              {errors.documentType && (
+                <p className="mt-1 text-sm text-red-600">{errors.documentType}</p>
+              )}
             </div>
 
             <Input
               label="Número de Documento"
               value={formData.documentNumber}
-              onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
+              onChange={handleInputChange('documentNumber')}
               error={errors.documentNumber}
               icon={<FileText size={18} />}
               required
             />
           </div>
 
-          <Input
-            label="Teléfono"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            icon={<Phone size={18} />}
-          />
+          <div>
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={formData.phoneNumber || ''}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              error={errors.phoneNumber}
+              icon={<Phone size={18} />}
+              placeholder="+573001234567"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Formato internacional requerido (ej: +573001234567)
+            </p>
+          </div>
 
           <Input
             label="Dirección"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            value={formData.address || ''}
+            onChange={handleInputChange('address')}
             icon={<MapPin size={18} />}
           />
+        </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Guardar Cambios
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Guardar Cambios
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
