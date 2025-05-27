@@ -15,7 +15,7 @@ export const MovementReason = z.enum([
   'INITIAL_STOCK'
 ]);
 
-// Schema para crear movimiento de inventario (sin status)
+// Schema para crear movimiento de inventario (sin unitPrice para implementación actual)
 export const createInventoryMovementSchema = z.object({
   type: MovementType,
   reason: MovementReason,
@@ -23,10 +23,6 @@ export const createInventoryMovementSchema = z.object({
     .number()
     .min(1, 'La cantidad debe ser mayor a 0')
     .max(999999, 'La cantidad no puede exceder 999,999'),
-  unitPrice: z
-    .number()
-    .min(0, 'El precio unitario debe ser mayor o igual a 0')
-    .max(999999.99, 'El precio unitario no puede exceder 999,999.99'),
   productId: z
     .number()
     .min(1, 'Debe seleccionar un producto'),
@@ -60,9 +56,7 @@ export const createInventoryMovementSchema = z.object({
 export const inventoryMovementFormSchema = z.object({
   productId: z.string().min(1, 'Debe seleccionar un producto'),
   supplierId: z.string().optional(),
-  saleId: z.string().optional(),
   quantity: z.string().min(1, 'La cantidad es requerida'),
-  unitPrice: z.string().min(1, 'El precio unitario es requerido'),
   reason: z.string().min(1, 'La razón es requerida'),
   notes: z.string().optional(),
 });
@@ -73,7 +67,7 @@ export type InventoryMovementFormData = z.infer<typeof inventoryMovementFormSche
 export type MovementTypeEnum = z.infer<typeof MovementType>;
 export type MovementReasonEnum = z.infer<typeof MovementReason>;
 
-// Función helper para validar el formulario
+// Función helper para validar el formulario (adaptada para implementación simple)
 export const validateInventoryMovementForm = (
   data: InventoryMovementFormData, 
   type: MovementTypeEnum
@@ -85,17 +79,12 @@ export const validateInventoryMovementForm = (
   try {
     // Convertir strings a números y preparar datos
     const quantity = parseFloat(data.quantity);
-    const unitPrice = parseFloat(data.unitPrice);
     const productId = parseInt(data.productId);
     const supplierId = data.supplierId ? parseInt(data.supplierId) : undefined;
-    const saleId = data.saleId ? parseInt(data.saleId) : undefined;
 
     // Verificar conversiones
     if (isNaN(quantity) || quantity <= 0) {
       return { isValid: false, errors: { quantity: 'La cantidad debe ser un número mayor a 0' } };
-    }
-    if (isNaN(unitPrice) || unitPrice < 0) {
-      return { isValid: false, errors: { unitPrice: 'El precio unitario debe ser un número mayor o igual a 0' } };
     }
     if (isNaN(productId)) {
       return { isValid: false, errors: { productId: 'Debe seleccionar un producto válido' } };
@@ -110,10 +99,8 @@ export const validateInventoryMovementForm = (
       type,
       reason: data.reason as MovementReasonEnum,
       quantity,
-      unitPrice,
       productId,
       supplierId: type === 'ENTRY' ? parseInt(data.supplierId!) : undefined,
-      saleId,
       notes: data.notes?.trim() || undefined,
     };
 
@@ -138,16 +125,16 @@ export const getReasonOptions = (type: MovementTypeEnum): { value: MovementReaso
   if (type === 'ENTRY') {
     return [
       { value: 'PURCHASE', label: 'Compra' },
-      { value: 'RETURN', label: 'Devolución' },
-      { value: 'ADJUSTMENT', label: 'Ajuste' },
+      { value: 'RETURN', label: 'Devolución de Cliente' },
+      { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
       { value: 'INITIAL_STOCK', label: 'Stock Inicial' },
     ];
   } else {
     return [
       { value: 'SALE', label: 'Venta' },
-      { value: 'DAMAGE', label: 'Daño' },
-      { value: 'ADJUSTMENT', label: 'Ajuste' },
-      { value: 'RETURN', label: 'Devolución' },
+      { value: 'DAMAGE', label: 'Producto Dañado' },
+      { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
+      { value: 'RETURN', label: 'Devolución a Proveedor' },
     ];
   }
 };

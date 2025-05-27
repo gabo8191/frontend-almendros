@@ -6,19 +6,18 @@ import { MovementType } from '../../api/inventoryService';
 import { productService, Product } from '../../api/productService';
 import { supplierService, Supplier } from '../../api/supplierService';
 import { useToast } from '../../../../shared/context/ToastContext';
+import { 
+  InventoryMovementFormData,
+  validateInventoryMovementForm,
+  getReasonOptions,
+  CreateInventoryMovementData
+} from '../../schemas/inventory.schema';
 
 interface NewMovementModalProps {
   isOpen: boolean;
   onClose: () => void;
   type: MovementType;
-  onSave: (movementData: {
-    type: MovementType;
-    quantity: number;
-    productId: number;
-    supplierId?: number;
-    reason: string;
-    notes?: string;
-  }) => Promise<void>;
+  onSave: (movementData: CreateInventoryMovementData) => Promise<void>;
 }
 
 const NewMovementModal: React.FC<NewMovementModalProps> = ({
@@ -27,7 +26,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
   type,
   onSave,
 }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<InventoryMovementFormData>({
     productId: '',
     supplierId: '',
     quantity: '',
@@ -40,25 +39,6 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const { showToast } = useToast();
-
-  // Opciones de razones según el tipo de movimiento
-  const getReasonOptions = () => {
-    if (type === 'ENTRY') {
-      return [
-        { value: 'PURCHASE', label: 'Compra' },
-        { value: 'RETURN', label: 'Devolución de Cliente' },
-        { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
-        { value: 'INITIAL_STOCK', label: 'Stock Inicial' },
-      ];
-    } else {
-      return [
-        { value: 'SALE', label: 'Venta' },
-        { value: 'DAMAGE', label: 'Producto Dañado' },
-        { value: 'ADJUSTMENT', label: 'Ajuste de Inventario' },
-        { value: 'RETURN', label: 'Devolución a Proveedor' },
-      ];
-    }
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,63 +76,47 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
     }
   }, [isOpen, type]);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.productId) {
-      newErrors.productId = 'Selecciona un producto';
+  const handleInputChange = (field: keyof InventoryMovementFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+    
+    // Limpiar error del campo si existe
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
     }
-
-    if (type === 'ENTRY' && !formData.supplierId) {
-      newErrors.supplierId = 'Selecciona un proveedor';
-    }
-
-    const quantity = parseInt(formData.quantity);
-    if (!formData.quantity || isNaN(quantity) || quantity <= 0) {
-      newErrors.quantity = 'La cantidad debe ser mayor a 0';
-    }
-
-    if (!formData.reason) {
-      newErrors.reason = 'Selecciona una razón';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    // Validar con Zod
+    const validation = validateInventoryMovementForm(formData, type);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      return;
+    }
+
+    if (!validation.cleanData) {
+      setErrors({ general: 'Error procesando los datos' });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await onSave({
-        type,
-        productId: parseInt(formData.productId),
-        quantity: parseInt(formData.quantity),
-        supplierId: type === 'ENTRY' ? parseInt(formData.supplierId) : undefined,
-        reason: formData.reason,
-        notes: formData.notes || undefined,
-      });
+      await onSave(validation.cleanData);
+      showToast('success', 'Movimiento registrado exitosamente');
       onClose();
-      setFormData({
-        productId: '',
-        supplierId: '',
-        quantity: '',
-        reason: '',
-        notes: '',
-      });
-    } catch (error) {
+    } catch (error: any) {
       showToast('error', error.message || 'Error al registrar el movimiento');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const reasonOptions = getReasonOptions();
+  const reasonOptions = getReasonOptions(type);
 
   return (
     <Modal
@@ -161,13 +125,20 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
       title={`Registrar ${type === 'ENTRY' ? 'Entrada' : 'Salida'} de Inventario`}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Error general */}
+        {errors.general && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.general}
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Producto *
           </label>
           <select
             value={formData.productId}
-            onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+            onChange={handleInputChange('productId')}
             className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             disabled={isLoadingData}
           >
@@ -189,7 +160,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
           </label>
           <select
             value={formData.reason}
-            onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+            onChange={handleInputChange('reason')}
             className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
           >
             <option value="">Selecciona una razón</option>
@@ -211,7 +182,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
             </label>
             <select
               value={formData.supplierId}
-              onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+              onChange={handleInputChange('supplierId')}
               className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
               disabled={isLoadingData}
             >
@@ -232,18 +203,20 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({
           label="Cantidad"
           type="number"
           value={formData.quantity}
-          onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+          onChange={handleInputChange('quantity')}
           error={errors.quantity}
           required
           min="1"
           step="1"
+          placeholder="Ingresa la cantidad"
         />
 
         <Input
           label="Notas (opcional)"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          value={formData.notes || ''}
+          onChange={handleInputChange('notes')}
           placeholder="Información adicional sobre el movimiento"
+          maxLength={500}
         />
 
         <div className="flex justify-end space-x-3 mt-6">
