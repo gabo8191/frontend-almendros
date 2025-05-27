@@ -48,6 +48,19 @@ interface PaginatedResponse<T> {
   message: string;
 }
 
+/**
+ * Helper function to build URL search parameters
+ */
+const buildParams = (paramsObj: Record<string, any>) => {
+  const params = new URLSearchParams();
+  Object.entries(paramsObj).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.append(key, String(value));
+    }
+  });
+  return params.toString();
+};
+
 export const inventoryService = {
   getMovements: async (
     page = 1,
@@ -62,19 +75,13 @@ export const inventoryService = {
       reason?: string;
     }
   ): Promise<PaginatedResponse<InventoryMovement>> => {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...(filters?.type && { type: filters.type }),
-      ...(filters?.productId && { productId: filters.productId.toString() }),
-      ...(filters?.supplierId && { supplierId: filters.supplierId.toString() }),
-      ...(filters?.saleId && { saleId: filters.saleId.toString() }),
-      ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
-      ...(filters?.dateTo && { dateTo: filters.dateTo }),
-      ...(filters?.reason && { reason: filters.reason }),
+    const query = buildParams({
+      page,
+      limit,
+      ...filters,
     });
 
-    const response = await api.get<PaginatedResponse<InventoryMovement>>(`/inventory-movements?${params}`);
+    const response = await api.get<PaginatedResponse<InventoryMovement>>(`/inventory-movements?${query}`);
     return response.data;
   },
 
@@ -95,9 +102,13 @@ export const inventoryService = {
     try {
       const response = await api.post<{ data: InventoryMovement; message: string }>('/inventory-movements', movementData);
       return response.data.data;
-    } catch (error) {
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'response' in error &&
+          typeof (error as any).response === 'object' && (error as any).response !== null &&
+          'data' in (error as any).response &&
+          typeof (error as any).response.data === 'object' && (error as any).response.data !== null &&
+          'message' in (error as any).response.data) {
+        throw new Error((error as any).response.data.message);
       }
       throw error;
     }
@@ -129,19 +140,14 @@ export const inventoryService = {
       reason?: string;
     }
   ): Promise<PaginatedResponse<InventoryMovement>> => {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-      ...(filters?.type && { type: filters.type }),
-      ...(filters?.supplierId && { supplierId: filters.supplierId.toString() }),
-      ...(filters?.saleId && { saleId: filters.saleId.toString() }),
-      ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
-      ...(filters?.dateTo && { dateTo: filters.dateTo }),
-      ...(filters?.reason && { reason: filters.reason }),
+    const query = buildParams({
+      page,
+      limit,
+      ...filters,
     });
 
     const response = await api.get<PaginatedResponse<InventoryMovement>>(
-      `/inventory-movements/products/${productId}?${params}`
+      `/inventory-movements/products/${productId}?${query}`
     );
     return response.data;
   },
