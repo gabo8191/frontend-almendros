@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Search, Plus, Calendar, User, Eye, RefreshCw } from 'lucide-react';
-import { saleService, Sale } from '../../api/saleService';
+import { saleService, Sale } from '../../api/sale/saleService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
@@ -8,6 +8,7 @@ import Spinner from '../../../../shared/components/Spinner';
 import { useToast } from '../../../../shared/context/ToastContext';
 import NewSaleModal from './NewSaleModal';
 import SaleDetailsModal from './SaleDetailsModal';
+
 
 const SalesPage: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);

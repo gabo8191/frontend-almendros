@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Search, Plus, RefreshCw } from 'lucide-react';
-import { Client } from '../../api/clientService';
+import { Client } from '../../api/client/clientService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';

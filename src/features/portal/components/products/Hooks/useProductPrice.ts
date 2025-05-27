@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { productService } from '../../../api/productService';
+import { priceService } from '../../../api/product';
 
 interface PriceData {
   purchasePrice: number | null;
@@ -23,11 +23,9 @@ export function useProductPrice(productId: number): PriceData {
       if (!productId) return;
       
       try {
-        const currentPrice = await productService.getCurrentPrice(productId);
+        const currentPrice = await priceService.getCurrentPrice(productId);
         
-        // Only update state if component is still mounted
         if (isMounted) {
-          // Convert string prices to numbers
           const purchasePrice = currentPrice.purchasePrice ? Number(currentPrice.purchasePrice) : null;
           const sellingPrice = currentPrice.sellingPrice ? Number(currentPrice.sellingPrice) : null;
           
@@ -39,9 +37,6 @@ export function useProductPrice(productId: number): PriceData {
           });
         }
       } catch (error) {
-        console.error(`Error fetching price for product ${productId}:`, error);
-        
-        // Only update state if component is still mounted
         if (isMounted) {
           setPriceData({
             purchasePrice: null,
@@ -55,7 +50,6 @@ export function useProductPrice(productId: number): PriceData {
 
     fetchPrice();
     
-    // Cleanup function to prevent state updates after unmounting
     return () => {
       isMounted = false;
     };

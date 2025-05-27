@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { clientService, Client } from '../../../api/clientService';
+import { clientService, Client } from '../../../api/client/clientService';
 import { useToast } from '../../../../../shared/context/ToastContext';
 import { useAuth } from '../../../../auth/context/AuthContext';
 import { Role } from '../../../../auth/types';

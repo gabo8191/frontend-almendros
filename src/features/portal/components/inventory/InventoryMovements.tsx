@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { MovementType } from '../../api/inventoryService';
+import { MovementType } from '../../api/inventory/inventoryService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';

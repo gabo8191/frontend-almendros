@@ -3,9 +3,9 @@ import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import { Plus, Trash2, Search, AlertCircle } from 'lucide-react';
-import { productService } from '../../api/productService';
-import { clientService, Client } from '../../api/clientService';
-import { saleService } from '../../api/saleService';
+import { productService } from '../../api/product/productService';
+import { clientService, Client } from '../../api/client/clientService';
+import { saleService } from '../../api/sale/saleService';
 import { useToast } from '../../../../shared/context/ToastContext';
 import NewClientModal from '../../components/clients/NewClient';
 

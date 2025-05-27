@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileSpreadsheet, AlertTriangle, FileText } from 'lucide-react';
-import { inventoryService } from '../../api/inventoryService';
-import { inventoryReportService } from '../../api/reportService';
+import { inventoryService } from '../../api/inventory/inventoryService';
+import { inventoryReportService } from '../../api/inventory/reportService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';

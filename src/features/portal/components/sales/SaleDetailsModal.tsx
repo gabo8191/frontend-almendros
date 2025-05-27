@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal } from '../../../../shared/components/Modal';
-import { Sale } from '../../api/saleService';
-import { formatCurrency, formatDate } from '../../../../utils/formatters';
+import { Sale } from '../../api/sale/saleService';
 import { AlertCircle } from 'lucide-react';
 import Spinner from '../../../../shared/components/Spinner';
 

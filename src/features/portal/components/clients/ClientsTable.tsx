@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Edit2, UserX, UserCheck } from 'lucide-react';
-import { Client } from '../../api/clientService';
+import { Client } from '../../api/client/clientService';
 import Button from '../../../../shared/components/Button';
 
 interface ClientsTableProps {

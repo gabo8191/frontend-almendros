@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, User, Phone, MapPin, FileText } from 'lucide-react';
-import { Client } from '../../api/clientService';
+import { Client } from '../../api/client/clientService';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import Modal from '../../../../shared/components/Modal';
