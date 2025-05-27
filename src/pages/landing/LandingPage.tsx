@@ -1,62 +1,34 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../shared/components/Button';
-import MobileMenu from '../../shared/components/MobileMenu';
 import Modal from '../../shared/components/Modal';
 import SupportModal from '../../shared/components/SupportModal';
+import LandingHeader from './LandingHeader';
 import { LeafyGreen } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [modals, setModals] = useState({
+    mobileMenu: false,
+    about: false,
+    support: false,
+    privacy: false,
+    terms: false,
+  });
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleModal = (modalName: keyof typeof modals) => {
+    setModals(prev => ({
+      ...prev,
+      mobileMenu: modalName === 'mobileMenu' ? !prev.mobileMenu : false,
+      [modalName]: !prev[modalName]
+    }));
   };
-
-  const navLinks = (
-    <>
-      <button 
-        onClick={() => setIsAboutModalOpen(true)} 
-        className="text-gray-600 hover:text-gray-900 transition-colors"
-      >
-        Acerca de
-      </button>
-      <button 
-        onClick={() => setIsSupportModalOpen(true)}
-        className="text-gray-600 hover:text-gray-900 transition-colors"
-      >
-        Contacto
-      </button>
-      <Link to="/login" className="text-primary-600 hover:text-primary-700 transition-colors">
-        Iniciar Sesión
-      </Link>
-    </>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col">
-      <header className="py-6 px-6 md:px-10 flex items-center justify-between bg-white shadow-sm">
-        <div className="flex items-center">
-          <LeafyGreen className="h-8 w-8 text-primary-600" />
-          <span className="ml-2 text-xl font-medium text-gray-900">Almendros</span>
-        </div>
-        
-        <nav className="hidden lg:block">
-          <ul className="flex space-x-8">
-            {navLinks}
-          </ul>
-        </nav>
-
-        <MobileMenu isOpen={isMobileMenuOpen} onToggle={toggleMobileMenu}>
-          <div className="flex flex-col space-y-4">
-            {navLinks}
-          </div>
-        </MobileMenu>
-      </header>
+      <LandingHeader 
+        modals={modals}
+        onToggleModal={toggleModal}
+      />
 
       <main className="flex-grow flex items-center justify-center px-6 md:px-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -83,7 +55,7 @@ const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center">
             <LeafyGreen className="h-6 w-6 text-primary-600" />
-            <span className="ml-2 text-lg font-medium text-gray-900">Almendros</span>
+            <span className="ml-2 text-lg font-semibold text-gray-900">Almendros</span>
           </div>
           <div className="mt-4 md:mt-0 text-sm text-gray-600">
             &copy; {new Date().getFullYear()} Almendros. Todos los derechos reservados.
@@ -92,7 +64,7 @@ const LandingPage: React.FC = () => {
             <ul className="flex space-x-6">
               <li>
                 <button 
-                  onClick={() => setIsTermsModalOpen(true)}
+                  onClick={() => toggleModal('terms')}
                   className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Términos
@@ -100,7 +72,7 @@ const LandingPage: React.FC = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setIsPrivacyModalOpen(true)}
+                  onClick={() => toggleModal('privacy')}
                   className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Privacidad
@@ -108,7 +80,7 @@ const LandingPage: React.FC = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setIsSupportModalOpen(true)}
+                  onClick={() => toggleModal('support')}
                   className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Ayuda
@@ -119,71 +91,80 @@ const LandingPage: React.FC = () => {
         </div>
       </footer>
 
-      <Modal
-        isOpen={isAboutModalOpen}
-        onClose={() => setIsAboutModalOpen(false)}
-        title="Acerca de Almendros"
-      >
-        <div className="prose prose-sm">
-          <p className="text-gray-600 mb-4">
-            Este software está siendo desarrollado por un grupo de desarrolladores en la Universidad Pedagógica y Tecnológica de Colombia (UPTC).
-          </p>
-          <div className="space-y-2">
-            <p className="text-gray-800">Gabriel Castillo</p>
-            <p className="text-gray-800">Sebastian Cañon</p>
-            <p className="text-gray-800">Oscar Gonzalez</p>
-            <p className="text-gray-800">Jhon Castro</p>
-            <p className="text-gray-800">Sebastian Zárate</p>
-          </div>
-        </div>
-      </Modal>
-
+      <AboutModal 
+        isOpen={modals.about} 
+        onClose={() => toggleModal('about')} 
+      />
+      
       <SupportModal
-        isOpen={isSupportModalOpen}
-        onClose={() => setIsSupportModalOpen(false)}
+        isOpen={modals.support}
+        onClose={() => toggleModal('support')}
       />
 
-      <Modal
-        isOpen={isPrivacyModalOpen}
-        onClose={() => setIsPrivacyModalOpen(false)}
-        title="Política de Privacidad"
-      >
-        <div className="prose prose-sm">
-          <p className="text-gray-600">
-            En Almendros, nos tomamos muy en serio la privacidad de nuestros usuarios. Esta política describe cómo recopilamos, usamos y protegemos tu información personal.
-          </p>
-          <h4 className="text-gray-800 mt-4">Recopilación de Información</h4>
-          <p className="text-gray-600">
-            Recopilamos información necesaria para proporcionar nuestros servicios, incluyendo datos de contacto y detalles de uso del sistema.
-          </p>
-          <h4 className="text-gray-800 mt-4">Uso de la Información</h4>
-          <p className="text-gray-600">
-            Utilizamos tu información para mejorar nuestros servicios, proporcionar soporte y mantener la seguridad de la plataforma.
-          </p>
-        </div>
-      </Modal>
+      <PrivacyModal 
+        isOpen={modals.privacy} 
+        onClose={() => toggleModal('privacy')} 
+      />
 
-      <Modal
-        isOpen={isTermsModalOpen}
-        onClose={() => setIsTermsModalOpen(false)}
-        title="Términos de Servicio"
-      >
-        <div className="prose prose-sm">
-          <p className="text-gray-600">
-            Al utilizar Almendros, aceptas cumplir con nuestros términos de servicio. Estos términos establecen las reglas y regulaciones para el uso de nuestra plataforma.
-          </p>
-          <h4 className="text-gray-800 mt-4">Uso Aceptable</h4>
-          <p className="text-gray-600">
-            Te comprometes a utilizar nuestros servicios de manera ética y legal, respetando los derechos de otros usuarios y las políticas de la plataforma.
-          </p>
-          <h4 className="text-gray-800 mt-4">Licencia</h4>
-          <p className="text-gray-600">
-            Almendros y su contenido están protegidos por derechos de autor y otras leyes de propiedad intelectual.
-          </p>
-        </div>
-      </Modal>
+      <TermsModal 
+        isOpen={modals.terms} 
+        onClose={() => toggleModal('terms')} 
+      />
     </div>
   );
 };
+
+const AboutModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Acerca de Almendros">
+    <div className="prose prose-sm">
+      <p className="text-gray-600 mb-4">
+        Este software está siendo desarrollado por un grupo de desarrolladores en la Universidad Pedagógica y Tecnológica de Colombia (UPTC).
+      </p>
+      <div className="space-y-2">
+        <p className="text-gray-800">Gabriel Castillo</p>
+        <p className="text-gray-800">Sebastian Cañon</p>
+        <p className="text-gray-800">Oscar Gonzalez</p>
+        <p className="text-gray-800">Jhon Castro</p>
+        <p className="text-gray-800">Sebastian Zárate</p>
+      </div>
+    </div>
+  </Modal>
+);
+
+const PrivacyModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Política de Privacidad">
+    <div className="prose prose-sm">
+      <p className="text-gray-600">
+        En Almendros, nos tomamos muy en serio la privacidad de nuestros usuarios. Esta política describe cómo recopilamos, usamos y protegemos tu información personal.
+      </p>
+      <h4 className="text-gray-800 mt-4">Recopilación de Información</h4>
+      <p className="text-gray-600">
+        Recopilamos información necesaria para proporcionar nuestros servicios, incluyendo datos de contacto y detalles de uso del sistema.
+      </p>
+      <h4 className="text-gray-800 mt-4">Uso de la Información</h4>
+      <p className="text-gray-600">
+        Utilizamos tu información para mejorar nuestros servicios, proporcionar soporte y mantener la seguridad de la plataforma.
+      </p>
+    </div>
+  </Modal>
+);
+
+const TermsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => (
+  <Modal isOpen={isOpen} onClose={onClose} title="Términos de Servicio">
+    <div className="prose prose-sm">
+      <p className="text-gray-600">
+        Al utilizar Almendros, aceptas cumplir con nuestros términos de servicio. Estos términos establecen las reglas y regulaciones para el uso de nuestra plataforma.
+      </p>
+      <h4 className="text-gray-800 mt-4">Uso Aceptable</h4>
+      <p className="text-gray-600">
+        Te comprometes a utilizar nuestros servicios de manera ética y legal, respetando los derechos de otros usuarios y las políticas de la plataforma.
+      </p>
+      <h4 className="text-gray-800 mt-4">Licencia</h4>
+      <p className="text-gray-600">
+        Almendros y su contenido están protegidos por derechos de autor y otras leyes de propiedad intelectual.
+      </p>
+    </div>
+  </Modal>
+);
 
 export default LandingPage;

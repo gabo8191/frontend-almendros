@@ -48,7 +48,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Contactar Soporte" size="md">
       <div className="space-y-6">
-        {/* Header */}
         <div className="text-center">
           <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Phone size={32} className="text-primary-600" />
@@ -61,7 +60,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
           </p>
         </div>
 
-        {/* Phone Numbers */}
         <div className="space-y-4">
           {phoneNumbers.map((phone, index) => (
             <div 
@@ -94,7 +92,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -130,7 +127,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
           ))}
         </div>
 
-        {/* Additional Info */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <div className="flex items-start">
             <ExternalLink size={20} className="text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
@@ -147,7 +143,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Close Button */}
         <div className="flex justify-end pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             Cerrar
