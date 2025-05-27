@@ -89,7 +89,7 @@ export const saleService = {
     clientId: number;
     details: {
       quantity: number;
-      unitPrice: number;
+      // ✅ REMOVER unitPrice de la interface
       discountAmount: number;
       productId: number;
     }[];
