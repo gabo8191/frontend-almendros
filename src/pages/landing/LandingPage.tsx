@@ -3,15 +3,15 @@ import { Link } from 'react-router-dom';
 import Button from '../../shared/components/Button';
 import MobileMenu from '../../shared/components/MobileMenu';
 import Modal from '../../shared/components/Modal';
+import SupportModal from '../../shared/components/SupportModal';
 import { LeafyGreen } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -26,7 +26,7 @@ const LandingPage: React.FC = () => {
         Acerca de
       </button>
       <button 
-        onClick={() => setIsContactModalOpen(true)}
+        onClick={() => setIsSupportModalOpen(true)}
         className="text-gray-600 hover:text-gray-900 transition-colors"
       >
         Contacto
@@ -108,7 +108,7 @@ const LandingPage: React.FC = () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setIsHelpModalOpen(true)}
+                  onClick={() => setIsSupportModalOpen(true)}
                   className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Ayuda
@@ -119,7 +119,6 @@ const LandingPage: React.FC = () => {
         </div>
       </footer>
 
-      {/* About Modal */}
       <Modal
         isOpen={isAboutModalOpen}
         onClose={() => setIsAboutModalOpen(false)}
@@ -139,23 +138,11 @@ const LandingPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Contact Modal */}
-      <Modal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-        title="Contacto"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            Para cualquier consulta o soporte, no dudes en contactarnos:
-          </p>
-          <p className="text-gray-800 font-medium">
-            Teléfono: 311 870 0670
-          </p>
-        </div>
-      </Modal>
+      <SupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+      />
 
-      {/* Privacy Modal */}
       <Modal
         isOpen={isPrivacyModalOpen}
         onClose={() => setIsPrivacyModalOpen(false)}
@@ -176,7 +163,6 @@ const LandingPage: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Terms Modal */}
       <Modal
         isOpen={isTermsModalOpen}
         onClose={() => setIsTermsModalOpen(false)}
@@ -193,25 +179,6 @@ const LandingPage: React.FC = () => {
           <h4 className="text-gray-800 mt-4">Licencia</h4>
           <p className="text-gray-600">
             Almendros y su contenido están protegidos por derechos de autor y otras leyes de propiedad intelectual.
-          </p>
-        </div>
-      </Modal>
-
-      {/* Help Modal */}
-      <Modal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-        title="Ayuda y Soporte"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            ¿Necesitas ayuda? Contáctanos:
-          </p>
-          <p className="text-gray-800 font-medium">
-            Teléfono de soporte: 311 870 0670
-          </p>
-          <p className="text-gray-600">
-            Nuestro equipo de soporte está disponible para ayudarte con cualquier consulta o problema que puedas tener.
           </p>
         </div>
       </Modal>

@@ -10,7 +10,6 @@ import Portal from '../pages/portal/Portal';
 import POSSystem from '../features/portal/components/products/Products';
 import Employees from '../features/portal/components/employees/Employees';
 import Clients from '../features/portal/components/clients/Clients';
-import Settings from '../features/portal/components/settings/Settings';
 import Dashboard from '../features/portal/components/dashboard/Dashboard';
 import SalesPage from '../features/portal/components/sales/SalesPage';
 import InventoryMovements from '../features/portal/components/inventory/InventoryMovements';
@@ -36,7 +35,6 @@ const AppRoutes: React.FC = () => {
                 <Route path="inventory" element={<InventoryMovements />} />
                 <Route path="reports" element={<InventoryReports />} />
                 <Route path="suppliers" element={<SuppliersPage />} />
-                <Route path="settings" element={<Settings />} />
               </Route>
             </Route>
             
