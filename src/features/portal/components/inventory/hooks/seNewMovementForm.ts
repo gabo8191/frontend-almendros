@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { MovementType } from '../../../api/inventoryService';
-import { productService, Product } from '../../../api/productService';
-import { supplierService, Supplier } from '../../../api/supplierService';
+import { MovementType } from '../../../api/inventory/inventoryService';
+import { productService, Product } from '../../../api/product';
+import { supplierService, Supplier } from '../../../api/supplier/supplierService';
 import { useToast } from '../../../../../shared/context/ToastContext';
 import { 
   InventoryMovementFormData,

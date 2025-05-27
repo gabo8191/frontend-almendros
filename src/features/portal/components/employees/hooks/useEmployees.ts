@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { employeeService } from '../../../api/employeeService';
+import { employeeService } from '../../../api/employee/employeeService';
 import { User as UserType, Role } from '../../../../auth/types';
 import { useToast } from '../../../../../shared/context/ToastContext';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Package } from 'lucide-react';
-import { InventoryMovement } from '../../api/inventoryService';
+import { InventoryMovement } from '../../api/inventory/inventoryService';
 import Button from '../../../../shared/components/Button';
 
 interface InventoryMovementsTableProps {

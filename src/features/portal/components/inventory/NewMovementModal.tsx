@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
-import { MovementType } from '../../api/inventoryService';
+import { MovementType } from '../../api/inventory/inventoryService';
 import { CreateInventoryMovementData } from '../../schemas/inventory.schema';
 import { useNewMovementForm } from './hooks/seNewMovementForm';
 

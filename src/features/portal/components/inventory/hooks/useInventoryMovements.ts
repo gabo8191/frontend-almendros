@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { inventoryService, InventoryMovement, MovementType } from '../../../api/inventoryService';
+import { inventoryService, InventoryMovement, MovementType } from '../../../api/inventory/inventoryService';
 import { useToast } from '../../../../../shared/context/ToastContext';
+
 
 export const useInventoryMovements = () => {
   const [movements, setMovements] = useState<InventoryMovement[]>([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Truck, Search, Plus, UserX, UserCheck } from 'lucide-react';
-import { supplierService, Supplier } from '../../api/supplierService';
+import { supplierService, Supplier } from '../../api/supplier/supplierService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';

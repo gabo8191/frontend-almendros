@@ -7,7 +7,7 @@ import ProtectedRoute from './ProtectedRoute';
 import LandingPage from '../pages/landing/LandingPage';
 import LoginPage from '../pages/login/LoginPage';
 import Portal from '../pages/portal/Portal';
-import POSSystem from '../features/portal/components/pos/POSSystem';
+import POSSystem from '../features/portal/components/products/Products';
 import Employees from '../features/portal/components/employees/Employees';
 import Clients from '../features/portal/components/clients/Clients';
 import Settings from '../features/portal/components/settings/Settings';

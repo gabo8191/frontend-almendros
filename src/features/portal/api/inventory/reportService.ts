@@ -1,5 +1,5 @@
-import api from '../../../utils/axiosConfig';
-import { exportToExcel, exportToPDF, ExportData } from '../../../utils/exportUtils';
+import api from '../../../../utils/axiosConfig';
+import { exportToExcel, exportToPDF, ExportData } from '../../../../utils/exportUtils';
 
 export interface InventoryReportData {
   productId: string;

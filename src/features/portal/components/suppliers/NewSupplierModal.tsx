@@ -3,7 +3,7 @@ import { Mail, User, Phone, MapPin, FileText, Building } from 'lucide-react';
 import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
-import { Supplier } from '../../api/supplierService';
+import { Supplier } from '../../api/supplier/supplierService';
 import { 
   SupplierFormData, 
   validateSupplierForm, 

@@ -1,5 +1,6 @@
-import api from '../../../utils/axiosConfig';
-import { User, Role } from '../../auth/types';
+import api from '../../../../utils/axiosConfig';
+import {User , Role} from '../../../auth/types';
+
 
 interface PaginatedResponse<T> {
   message: string;
