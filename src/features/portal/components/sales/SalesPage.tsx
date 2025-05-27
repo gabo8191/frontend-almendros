@@ -1,202 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Search, Plus, Calendar, User, Eye, RefreshCw } from 'lucide-react';
-import { saleService, Sale } from '../../api/sale/saleService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import Spinner from '../../../../shared/components/Spinner';
-import { useToast } from '../../../../shared/context/ToastContext';
 import NewSaleModal from './NewSaleModal';
 import SaleDetailsModal from './SaleDetailsModal';
-
+import { useSales } from './hooks/useSales';
+import { useSaleDetails } from './hooks/useSaleDetails';
 
 const SalesPage: React.FC = () => {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalSales, setTotalSales] = useState(0);
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [dateFilter, setDateFilter] = useState({
-    startDate: '',
-    endDate: '',
-  });
-  // Estado para el ordenamiento por fecha e ID
-  const [sortConfig, setSortConfig] = useState({
-    field: 'saleDate', // 'saleDate' o 'id'
-    direction: 'desc'   // 'asc' o 'desc'
-  });
-  const { showToast } = useToast();
 
-  const fetchSales = async (page = currentPage) => {
-    try {
-      setIsLoading(true);
-      const filters: any = {};
-      
-      if (dateFilter.startDate) {
-        filters.startDate = dateFilter.startDate;
-      }
-      if (dateFilter.endDate) {
-        filters.endDate = dateFilter.endDate;
-      }
-
-      const response = await saleService.getSales(page, 10, filters);
-      setSales(response.data);
-      setTotalPages(response.meta.totalPages);
-      setTotalSales(response.meta.total);
-      setCurrentPage(response.meta.page);
-    } catch (error: any) {
-      console.error('Error fetching sales:', error);
-      showToast('error', 'Error al cargar las ventas');
-      setSales([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSales(1);
-  }, [dateFilter]);
-
-  useEffect(() => {
-    if (currentPage > 1) {
-      fetchSales(currentPage);
-    }
-  }, [currentPage]);
-
-  const handleViewDetails = async (saleId: number) => {
-    setIsFetchingDetails(true);
-    setIsDetailsModalOpen(true);
-    
-    try {
-      // Get the sale with basic info
-      const sale = await saleService.getSaleById(saleId);
-      
-      // Get the sale details if not included
-      if (!sale.details || sale.details.length === 0) {
-        const details = await saleService.getSaleDetails(saleId);
-        sale.details = details;
-      }
-      
-      setSelectedSale(sale);
-    } catch (error: any) {
-      console.error('Error fetching sale details:', error);
-      showToast('error', 'Error al cargar los detalles de la venta');
-      setSelectedSale(null);
-      setIsDetailsModalOpen(false);
-    } finally {
-      setIsFetchingDetails(false);
-    }
-  };
-
-  const handleCloseDetailsModal = () => {
-    setSelectedSale(null);
-    setIsDetailsModalOpen(false);
-    setIsFetchingDetails(false);
-  };
+  const salesData = useSales();
+  const saleDetailsData = useSaleDetails();
 
   const handleSaleCreated = () => {
     setIsNewSaleModalOpen(false);
-    fetchSales(1); // Refresh the sales list and go to first page
-    setCurrentPage(1);
-    showToast('success', 'Venta registrada exitosamente');
-  };
-
-  const handleRefresh = () => {
-    fetchSales(currentPage);
-  };
-
-  const handleDateFilterChange = (field: 'startDate' | 'endDate', value: string) => {
-    setDateFilter(prev => ({ ...prev, [field]: value }));
-    setCurrentPage(1); // Reset to first page when filter changes
-  };
-
-  const clearFilters = () => {
-    setDateFilter({ startDate: '', endDate: '' });
-    setSearchTerm('');
-    setCurrentPage(1);
-  };
-
-  // Función para ordenar las ventas por fecha e ID
-  const sortSales = (sales: Sale[], config: { field: string; direction: string }) => {
-    if (!config.field) return sales;
-
-    const sortedSales = [...sales].sort((a, b) => {
-      let valueA: any, valueB: any;
-
-      if (config.field === 'saleDate') {
-        // Ordenar por fecha
-        valueA = new Date(a.saleDate);
-        valueB = new Date(b.saleDate);
-      } else if (config.field === 'id') {
-        // Ordenar por ID de venta
-        valueA = a.id;
-        valueB = b.id;
-      }
-
-      if (config.direction === 'asc') {
-        return valueA - valueB;
-      } else {
-        return valueB - valueA;
-      }
-    });
-
-    return sortedSales;
-  };
-
-  // Función para cambiar el ordenamiento
-  const handleSort = (field: string) => {
-    setSortConfig(prevConfig => ({
-      field: field,
-      direction: prevConfig.field === field && prevConfig.direction === 'desc' ? 'asc' : 'desc'
-    }));
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-    }).format(amount);
-  };
-
-  // Aplicar filtros y ordenamiento
-  const filteredAndSortedSales = sortSales(
-    sales.filter((sale) => {
-      const searchLower = searchTerm.toLowerCase();
-      
-      // Search by sale ID
-      if (sale.id.toString().includes(searchTerm)) {
-        return true;
-      }
-      
-      // Search by client name
-      if (sale.client?.name?.toLowerCase().includes(searchLower)) {
-        return true;
-      }
-      
-      return false;
-    }),
-    sortConfig
-  );
-
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
+    salesData.handleRefresh();
   };
 
   return (
@@ -208,9 +29,9 @@ const SalesPage: React.FC = () => {
           <p className="text-gray-600 mt-1">
             Gestiona las ventas y transacciones de tu negocio
           </p>
-          {totalSales > 0 && (
+          {salesData.totalSales > 0 && (
             <p className="text-sm text-gray-500 mt-1">
-              Total de ventas: {totalSales}
+              Total de ventas: {salesData.totalSales}
             </p>
           )}
         </div>
@@ -218,15 +39,12 @@ const SalesPage: React.FC = () => {
           <Button
             variant="outline"
             icon={<RefreshCw size={16} />}
-            onClick={handleRefresh}
-            disabled={isLoading}
+            onClick={salesData.handleRefresh}
+            disabled={salesData.isLoading}
           >
             Actualizar
           </Button>
-          <Button
-            icon={<Plus size={16} />}
-            onClick={() => setIsNewSaleModalOpen(true)}
-          >
+          <Button icon={<Plus size={16} />} onClick={() => setIsNewSaleModalOpen(true)}>
             Nueva Venta
           </Button>
         </div>
@@ -239,8 +57,8 @@ const SalesPage: React.FC = () => {
             <Input
               icon={<Search size={18} />}
               placeholder="Buscar por ID o cliente..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={salesData.searchTerm}
+              onChange={(e) => salesData.setSearchTerm(e.target.value)}
               className="flex-1"
             />
             <div className="flex gap-2">
@@ -248,57 +66,53 @@ const SalesPage: React.FC = () => {
                 type="date"
                 icon={<Calendar size={18} />}
                 placeholder="Fecha inicio"
-                value={dateFilter.startDate}
-                onChange={(e) => handleDateFilterChange('startDate', e.target.value)}
+                value={salesData.dateFilter.startDate}
+                onChange={(e) => salesData.handleDateFilterChange('startDate', e.target.value)}
                 className="w-full md:w-48"
               />
               <Input
                 type="date"
                 icon={<Calendar size={18} />}
                 placeholder="Fecha fin"
-                value={dateFilter.endDate}
-                onChange={(e) => handleDateFilterChange('endDate', e.target.value)}
+                value={salesData.dateFilter.endDate}
+                onChange={(e) => salesData.handleDateFilterChange('endDate', e.target.value)}
                 className="w-full md:w-48"
               />
-              {(dateFilter.startDate || dateFilter.endDate || searchTerm) && (
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  size="sm"
-                >
+              {(salesData.dateFilter.startDate || salesData.dateFilter.endDate || salesData.searchTerm) && (
+                <Button variant="outline" onClick={salesData.clearFilters} size="sm">
                   Limpiar
                 </Button>
               )}
             </div>
           </div>
           
-          {/* Sorting Controls - Solo Fecha e ID */}
+          {/* Sorting Controls */}
           <div className="flex flex-col sm:flex-row gap-2 items-center">
             <span className="text-sm font-medium text-gray-700">Ordenar por:</span>
             <div className="flex gap-2">
               <Button
-                variant={sortConfig.field === 'saleDate' ? 'default' : 'outline'}
+                variant={salesData.sortConfig.field === 'saleDate' ? undefined : 'outline'} // ✅ Cambiar 'default' por undefined
                 size="sm"
-                onClick={() => handleSort('saleDate')}
+                onClick={() => salesData.handleSort('saleDate')}
                 className="flex items-center gap-1"
               >
                 Fecha
-                {sortConfig.field === 'saleDate' && (
+                {salesData.sortConfig.field === 'saleDate' && (
                   <span className="text-xs">
-                    {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                    {salesData.sortConfig.direction === 'desc' ? '↓' : '↑'}
                   </span>
                 )}
               </Button>
               <Button
-                variant={sortConfig.field === 'id' ? 'default' : 'outline'}
+                variant={salesData.sortConfig.field === 'id' ? undefined : 'outline'} // ✅ Cambiar 'default' por undefined
                 size="sm"
-                onClick={() => handleSort('id')}
+                onClick={() => salesData.handleSort('id')}
                 className="flex items-center gap-1"
               >
                 ID
-                {sortConfig.field === 'id' && (
+                {salesData.sortConfig.field === 'id' && (
                   <span className="text-xs">
-                    {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                    {salesData.sortConfig.direction === 'desc' ? '↓' : '↑'}
                   </span>
                 )}
               </Button>
@@ -307,29 +121,26 @@ const SalesPage: React.FC = () => {
         </div>
 
         {/* Content */}
-        {isLoading ? (
+        {salesData.isLoading ? (
           <div className="text-center py-12">
             <Spinner size="lg" className="mx-auto" />
             <p className="mt-4 text-gray-600">Cargando ventas...</p>
           </div>
-        ) : filteredAndSortedSales.length === 0 ? (
+        ) : salesData.sales.length === 0 ? (
           <div className="text-center py-12">
             <ShoppingCart size={64} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {searchTerm || dateFilter.startDate || dateFilter.endDate
+              {salesData.searchTerm || salesData.dateFilter.startDate || salesData.dateFilter.endDate
                 ? 'No se encontraron ventas'
                 : 'No hay ventas registradas'}
             </h3>
             <p className="text-gray-600 mb-6">
-              {searchTerm || dateFilter.startDate || dateFilter.endDate
+              {salesData.searchTerm || salesData.dateFilter.startDate || salesData.dateFilter.endDate
                 ? 'Intenta ajustar los filtros de búsqueda'
                 : 'Comienza registrando tu primera venta'}
             </p>
-            {!(searchTerm || dateFilter.startDate || dateFilter.endDate) && (
-              <Button
-                icon={<Plus size={16} />}
-                onClick={() => setIsNewSaleModalOpen(true)}
-              >
+            {!(salesData.searchTerm || salesData.dateFilter.startDate || salesData.dateFilter.endDate) && (
+              <Button icon={<Plus size={16} />} onClick={() => setIsNewSaleModalOpen(true)}>
                 Registrar Primera Venta
               </Button>
             )}
@@ -343,26 +154,26 @@ const SalesPage: React.FC = () => {
                   <tr className="bg-gray-50">
                     <th 
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('id')}
+                      onClick={() => salesData.handleSort('id')}
                     >
                       <div className="flex items-center gap-1">
                         ID
-                        {sortConfig.field === 'id' && (
+                        {salesData.sortConfig.field === 'id' && (
                           <span className="text-primary-600">
-                            {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                            {salesData.sortConfig.direction === 'desc' ? '↓' : '↑'}
                           </span>
                         )}
                       </div>
                     </th>
                     <th 
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSort('saleDate')}
+                      onClick={() => salesData.handleSort('saleDate')}
                     >
                       <div className="flex items-center gap-1">
                         Fecha
-                        {sortConfig.field === 'saleDate' && (
+                        {salesData.sortConfig.field === 'saleDate' && (
                           <span className="text-primary-600">
-                            {sortConfig.direction === 'desc' ? '↓' : '↑'}
+                            {salesData.sortConfig.direction === 'desc' ? '↓' : '↑'}
                           </span>
                         )}
                       </div>
@@ -379,13 +190,13 @@ const SalesPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAndSortedSales.map((sale) => (
+                  {salesData.sales.map((sale) => (
                     <tr key={sale.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{sale.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(sale.saleDate)}
+                        {salesData.formatDate(sale.saleDate)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -402,15 +213,15 @@ const SalesPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {formatCurrency(sale.totalAmount)}
+                        {salesData.formatCurrency(sale.totalAmount)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <Button
                           variant="ghost"
                           size="sm"
                           icon={<Eye size={16} />}
-                          onClick={() => handleViewDetails(sale.id)}
-                          disabled={isFetchingDetails}
+                          onClick={() => saleDetailsData.handleViewDetails(sale.id)}
+                          disabled={saleDetailsData.isFetchingDetails}
                         >
                           Ver Detalles
                         </Button>
@@ -423,17 +234,17 @@ const SalesPage: React.FC = () => {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-4">
-              {filteredAndSortedSales.map((sale) => (
+              {salesData.sales.map((sale) => (
                 <div key={sale.id} className="bg-white border rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="text-sm font-medium text-gray-500">Venta #{sale.id}</div>
                       <div className="text-lg font-bold text-gray-900">
-                        {formatCurrency(sale.totalAmount)}
+                        {salesData.formatCurrency(sale.totalAmount)}
                       </div>
                     </div>
                     <div className="text-sm text-gray-500 text-right">
-                      {formatDate(sale.saleDate)}
+                      {salesData.formatDate(sale.saleDate)}
                     </div>
                   </div>
                   
@@ -455,8 +266,8 @@ const SalesPage: React.FC = () => {
                       variant="outline"
                       size="sm"
                       icon={<Eye size={14} />}
-                      onClick={() => handleViewDetails(sale.id)}
-                      disabled={isFetchingDetails}
+                      onClick={() => saleDetailsData.handleViewDetails(sale.id)}
+                      disabled={saleDetailsData.isFetchingDetails}
                     >
                       Ver Detalles
                     </Button>
@@ -466,28 +277,28 @@ const SalesPage: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            {totalPages > 1 && (
+            {salesData.totalPages > 1 && (
               <div className="flex justify-center items-center mt-8 space-x-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={salesData.currentPage === 1}
+                  onClick={() => salesData.handlePageChange(salesData.currentPage - 1)}
                 >
                   Anterior
                 </Button>
                 
                 <div className="flex space-x-1">
-                  {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                    const pageNum = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
-                    if (pageNum > totalPages) return null;
+                  {[...Array(Math.min(5, salesData.totalPages))].map((_, i) => {
+                    const pageNum = salesData.currentPage <= 3 ? i + 1 : salesData.currentPage - 2 + i;
+                    if (pageNum > salesData.totalPages) return null;
                     
                     return (
                       <Button
                         key={pageNum}
-                        variant={pageNum === currentPage ? "default" : "outline"}
+                        variant={pageNum === salesData.currentPage ? undefined : "outline"} // ✅ Cambiar "default" por undefined
                         size="sm"
-                        onClick={() => handlePageChange(pageNum)}
+                        onClick={() => salesData.handlePageChange(pageNum)}
                         className="w-8 h-8 p-0"
                       >
                         {pageNum}
@@ -499,8 +310,8 @@ const SalesPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={salesData.currentPage === salesData.totalPages}
+                  onClick={() => salesData.handlePageChange(salesData.currentPage + 1)}
                 >
                   Siguiente
                 </Button>
@@ -511,22 +322,18 @@ const SalesPage: React.FC = () => {
       </Card>
 
       {/* Modals */}
-      {isNewSaleModalOpen && (
-        <NewSaleModal
-          isOpen={isNewSaleModalOpen}
-          onClose={() => setIsNewSaleModalOpen(false)}
-          onSaleCreated={handleSaleCreated}
-        />
-      )}
+      <NewSaleModal
+        isOpen={isNewSaleModalOpen}
+        onClose={() => setIsNewSaleModalOpen(false)}
+        onSaleCreated={handleSaleCreated}
+      />
 
-      {isDetailsModalOpen && (
-        <SaleDetailsModal
-          isOpen={isDetailsModalOpen}
-          onClose={handleCloseDetailsModal}
-          sale={selectedSale}
-          isLoading={isFetchingDetails}
-        />
-      )}
+      <SaleDetailsModal
+        isOpen={saleDetailsData.isDetailsModalOpen}
+        onClose={saleDetailsData.handleCloseDetailsModal}
+        sale={saleDetailsData.selectedSale}
+        isLoading={saleDetailsData.isFetchingDetails}
+      />
     </div>
   );
 };
