@@ -20,6 +20,32 @@ interface AuthContextProps {
 }
 
 const USER_STORAGE_KEY = 'almendros_user';
+const TOKEN_STORAGE_KEY = 'token';
+
+/**
+ * Helper for localStorage operations
+ */
+const authStorage = {
+  getUser: (): User | null => {
+    try {
+      const stored = localStorage.getItem(USER_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  },
+  setUser: (user: User) => {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  },
+  getToken: () => localStorage.getItem(TOKEN_STORAGE_KEY),
+  setToken: (token: string) => {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  },
+  clear: () => {
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
+};
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
@@ -29,53 +55,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const { showToast } = useToast();
 
-  // Load user from localStorage on mount
-  useEffect(() => {
-    const initializeAuth = () => {
-      const token = authService.getToken();
-      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
+  /**
+   * Clear all authentication data
+   */
+  const clearAuthData = () => {
+    authStorage.clear();
+    authService.logout();
+    setUser(null);
+    setIsAuthenticated(false);
+  };
 
-      if (token && storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          // Only set the user as authenticated if they are active
-          if (parsedUser.isActive) {
-            setUser(parsedUser);
-            setIsAuthenticated(true);
-          } else {
-            // Clear stored data if user is inactive
-            localStorage.removeItem(USER_STORAGE_KEY);
-            authService.logout();
-            showToast('error', 'Tu cuenta está desactivada. Contacta al administrador.');
-          }
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          // Clear invalid data
-          localStorage.removeItem(USER_STORAGE_KEY);
-          authService.logout();
-        }
+  /**
+   * Set authenticated user data
+   */
+  const setAuthenticatedUser = (userData: User, token?: string) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    authStorage.setUser(userData);
+    
+    if (token) {
+      authStorage.setToken(token);
+    }
+  };
+
+  /**
+   * Initialize authentication state from stored data
+   */
+  const initializeAuth = () => {
+    const token = authService.getToken();
+    const storedUser = authStorage.getUser();
+
+    if (token && storedUser) {
+      if (storedUser.isActive) {
+        authStorage.setToken(token);
+        setAuthenticatedUser(storedUser);
+      } else {
+        clearAuthData();
+        showToast('error', 'Tu cuenta está desactivada. Contacta al administrador.');
       }
-      setIsLoading(false);
-    };
+    } else {
+      clearAuthData();
+    }
+    
+    setIsLoading(false);
+  };
 
+  /**
+   * Load user data on component mount
+   */
+  useEffect(() => {
     initializeAuth();
   }, []);
 
+  /**
+   * Authenticate user with email and password
+   */
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const response = await authService.login({ email, password });
       
-      // Check if the user is active before allowing login
       if (!response.user.isActive) {
         throw new Error('Tu cuenta está desactivada. Contacta al administrador.');
       }
       
-      setUser(response.user);
-      setIsAuthenticated(true);
-      // Store user data
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
+      setAuthenticatedUser(response.user, response.token);
       showToast('success', '¡Inicio de sesión exitoso!');
+      
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al iniciar sesión';
       showToast('error', errorMessage);
@@ -85,6 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /**
+   * Register new user account
+   */
   const register = async (
     email: string,
     password: string,
@@ -104,11 +153,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         phoneNumber,
         address,
       });
-      setUser(response.user);
-      setIsAuthenticated(true);
-      // Store user data
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
+      
+      setAuthenticatedUser(response.user, response.token);
       showToast('success', '¡Cuenta creada exitosamente!');
+      
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Error al registrarse';
       showToast('error', errorMessage);
@@ -118,11 +166,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  /**
+   * Log out current user
+   */
   const logout = () => {
-    authService.logout();
-    localStorage.removeItem(USER_STORAGE_KEY);
-    setUser(null);
-    setIsAuthenticated(false);
+    clearAuthData();
     showToast('info', 'Has cerrado sesión');
   };
 

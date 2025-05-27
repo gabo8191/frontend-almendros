@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Mail, User, Phone, MapPin, FileText } from 'lucide-react';
-import { clientService } from '../../api/clientService';
-import Card from '../../../../shared/components/Card';
+import { Modal } from '../../../../shared/components/Modal';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
-import { useToast } from '../../../../shared/context/ToastContext';
+import { 
+  ClientFormData, 
+  validateClientForm, 
+  formatPhoneNumber 
+} from '../../schemas/client.schema';
 
-const NewClient: React.FC = () => {
-  const [formData, setFormData] = useState({
+interface NewClientModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: {
+    name: string;
+    email: string;
+    phoneNumber: string;
+    address: string;
+    documentType: string;
+    documentNumber: string;
+  }) => Promise<boolean>;
+}
+
+const NewClientModal: React.FC<NewClientModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+}) => {
+  const [formData, setFormData] = useState<ClientFormData>({
     name: '',
     email: '',
     phoneNumber: '',
@@ -18,137 +37,191 @@ const NewClient: React.FC = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { showToast } = useToast();
-  const navigate = useNavigate();
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phoneNumber: '',
+      address: '',
+      documentType: 'CC',
+      documentNumber: '',
+    });
+    setErrors({});
+  };
 
-    if (!formData.name) {
-      newErrors.name = 'El nombre es requerido';
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, phoneNumber: value });
+    
+    if (errors.phoneNumber) {
+      setErrors({ ...errors, phoneNumber: '' });
     }
+  };
 
-    if (!formData.email) {
-      newErrors.email = 'El correo electrónico es requerido';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Correo electrónico inválido';
+  const handlePhoneBlur = () => {
+    if (formData.phoneNumber && !formData.phoneNumber.startsWith('+')) {
+      const formatted = formatPhoneNumber(formData.phoneNumber);
+      setFormData({ ...formData, phoneNumber: formatted });
     }
+  };
 
-    if (!formData.documentNumber) {
-      newErrors.documentNumber = 'El número de documento es requerido';
+  const handleInputChange = (field: keyof ClientFormData) => (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+    
+    if (errors[field]) {
+      setErrors({ ...errors, [field]: '' });
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    const validation = validateClientForm(formData);
+    
+    if (!validation.isValid) {
+      setErrors(validation.errors);
       return;
     }
 
+    const finalData = {
+      name: formData.name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phoneNumber: formData.phoneNumber ? formatPhoneNumber(formData.phoneNumber) : '',
+      address: formData.address?.trim() || '',
+      documentType: formData.documentType,
+      documentNumber: formData.documentNumber.trim(),
+    };
+
     setIsSubmitting(true);
     try {
-      await clientService.createClient(formData);
-      showToast('success', 'Cliente creado exitosamente');
-      navigate('/portal/clients');
+      const success = await onSave(finalData);
+      if (success) {
+        onClose();
+        resetForm();
+      }
     } catch (error: any) {
-      showToast('error', error.response?.data?.message || 'Error al crear el cliente');
+      let errorMessage = 'Error al crear el cliente. Por favor, inténtalo de nuevo.';
+      
+      if (error.response?.data?.details) {
+        errorMessage = error.response.data.details.join(', ');
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Nuevo Cliente</h1>
-          <p className="text-gray-600 mt-1">Registra un nuevo cliente en el sistema</p>
-        </div>
-      </div>
+  const handleClose = () => {
+    onClose();
+    resetForm();
+  };
 
-      <Card>
-        <form onSubmit={handleSubmit} className="space-y-6">
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Nuevo Cliente" size="lg">
+      <form onSubmit={handleSubmit}>
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
+          </div>
+        )}
+
+        <div className="space-y-4">
           <Input
             label="Nombre Completo"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={handleInputChange('name')}
             error={errors.name}
             icon={<User size={18} />}
             required
+            placeholder="Ingresa el nombre completo"
           />
 
           <Input
             label="Correo Electrónico"
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={handleInputChange('email')}
             error={errors.email}
             icon={<Mail size={18} />}
             required
+            placeholder="ejemplo@correo.com"
           />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Documento
+                Tipo de Documento *
               </label>
               <select
                 value={formData.documentType}
-                onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
+                onChange={handleInputChange('documentType')}
                 className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
               >
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
+                <option value="TI">Tarjeta de Identidad</option>
                 <option value="NIT">NIT</option>
                 <option value="PP">Pasaporte</option>
               </select>
+              {errors.documentType && (
+                <p className="mt-1 text-sm text-red-600">{errors.documentType}</p>
+              )}
             </div>
 
             <Input
               label="Número de Documento"
               value={formData.documentNumber}
-              onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
+              onChange={handleInputChange('documentNumber')}
               error={errors.documentNumber}
               icon={<FileText size={18} />}
               required
+              placeholder="12345678"
             />
           </div>
 
-          <Input
-            label="Teléfono"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-            icon={<Phone size={18} />}
-          />
+          <div>
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={formData.phoneNumber || ''}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              error={errors.phoneNumber}
+              icon={<Phone size={18} />}
+              placeholder="+573001234567"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Formato internacional requerido (ej: +573001234567). Campo opcional.
+            </p>
+          </div>
 
           <Input
             label="Dirección"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            value={formData.address || ''}
+            onChange={handleInputChange('address')}
             icon={<MapPin size={18} />}
+            placeholder="Calle 123 #45-67, Ciudad"
           />
+        </div>
 
-          <div className="flex justify-end space-x-3 pt-6">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/portal/clients')}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Crear Cliente
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div>
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Crear Cliente
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
-export default NewClient;
+export default NewClientModal;

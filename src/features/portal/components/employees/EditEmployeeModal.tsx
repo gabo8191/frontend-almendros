@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import { User } from '../../../auth/types';
+import React from 'react';
+import { Mail, User, Phone, MapPin } from 'lucide-react';
+import { User as UserType } from '../../../auth/types';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import Modal from '../../../../shared/components/Modal';
+import { getRecommendedEmailDomains } from '../../schemas/employee.schema';
+import { useEditEmployeeForm } from './hooks/useEditEmployeeForm';
 
 interface EditEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  employee: User;
-  onSave: (data: Partial<User>) => Promise<void>;
+  employee: UserType;
+  onSave: (data: Partial<UserType>) => Promise<void>;
 }
 
 const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
@@ -17,88 +20,125 @@ const EditEmployeeModal: React.FC<EditEmployeeModalProps> = ({
   employee,
   onSave,
 }) => {
-  const [formData, setFormData] = useState({
-    firstName: employee.firstName,
-    lastName: employee.lastName,
-    email: employee.email,
-    phoneNumber: employee.phoneNumber || '',
-    address: employee.address || '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const {
+    formData,
+    errors,
+    isSubmitting,
+    handlePhoneChange,
+    handlePhoneBlur,
+    handleInputChange,
+    handleSubmit,
+  } = useEditEmployeeForm(employee);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      await onSave(formData);
-    } finally {
-      setIsSubmitting(false);
+  const onSubmit = async (e: React.FormEvent) => {
+    const success = await handleSubmit(e, onSave);
+    if (success) {
+      onClose();
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-apple-md w-full max-w-lg mx-4">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Editar Empleado</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Editar Empleado" size="lg">
+      <form onSubmit={onSubmit}>
+        {errors.submit && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {errors.submit}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Nombre"
               value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              onChange={handleInputChange('firstName')}
+              error={errors.firstName}
+              icon={<User size={18} />}
               required
+              placeholder="Nombre del empleado"
             />
             <Input
               label="Apellido"
               value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              onChange={handleInputChange('lastName')}
+              error={errors.lastName}
+              icon={<User size={18} />}
               required
+              placeholder="Apellido del empleado"
             />
           </div>
 
-          <Input
-            label="Correo Electrónico"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-          />
+          <div>
+            <Input
+              label="Correo Electrónico"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange('email')}
+              error={errors.email}
+              icon={<Mail size={18} />}
+              required
+              placeholder="correo@empresa.com"
+            />
+            {errors.email && errors.email.includes('temporales') && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm font-medium mb-2">
+                  Sugerencias de correos válidos:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {getRecommendedEmailDomains().slice(0, 6).map((domain) => (
+                    <span 
+                      key={domain}
+                      className="text-blue-600 text-xs bg-blue-100 px-2 py-1 rounded cursor-pointer hover:bg-blue-200"
+                      onClick={() => {
+                        const emailPart = formData.email.split('@')[0];
+                        if (emailPart) {
+                          handleInputChange('email')({ target: { value: `${emailPart}@${domain}` } } as any);
+                        }
+                      }}
+                    >
+                      @{domain}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-          <Input
-            label="Teléfono"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-          />
+          <div>
+            <Input
+              label="Teléfono"
+              type="tel"
+              value={formData.phoneNumber || ''}
+              onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
+              error={errors.phoneNumber}
+              icon={<Phone size={18} />}
+              placeholder="+573001234567"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Formato internacional requerido (ej: +573001234567). Campo opcional.
+            </p>
+          </div>
 
           <Input
             label="Dirección"
-            value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            value={formData.address || ''}
+            onChange={handleInputChange('address')}
+            icon={<MapPin size={18} />}
+            placeholder="Calle 123 #45-67, Ciudad"
           />
+        </div>
 
-          <div className="flex justify-end space-x-3 mt-6">
-            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              Guardar Cambios
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" isLoading={isSubmitting}>
+            Guardar Cambios
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 
