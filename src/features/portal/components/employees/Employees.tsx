@@ -4,6 +4,8 @@ import { User as UserType, Role } from '../../../auth/types';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import Spinner from '../../../../shared/components/Spinner';
+import Table from '../../../../shared/components/Table';
 import EditEmployeeModal from './EditEmployeeModal';
 import NewEmployeeModal from './NewEmployeeModal';
 import { useEmployees } from './hooks/useEmployees';
@@ -44,10 +46,82 @@ const Employees: React.FC = () => {
 
   const renderLoadingState = () => (
     <div className="text-center py-12">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+      <Spinner size="lg" className="mx-auto" />
       <p className="mt-4 text-gray-600">Cargando empleados...</p>
     </div>
   );
+  
+  const columns = [
+    {
+      header: 'Empleado',
+      renderCell: (employee: UserType) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+              <User size={20} className="text-primary-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">
+              {employee.firstName} {employee.lastName}
+            </div>
+            <div className="text-sm text-gray-500">{employee.email}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Rol',
+      renderCell: (employee: UserType) => (
+        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
+          {employee.role === Role.ADMINISTRATOR ? 'Administrador' : 'Vendedor'}
+        </span>
+      ),
+    },
+    {
+      header: 'Estado',
+      renderCell: (employee: UserType) => (
+        <span
+          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            employee.isActive
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {employee.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+    {
+      header: 'Acciones',
+      headerClassName: 'text-center',
+      renderCell: (employee: UserType) => (
+        <div className="flex justify-center items-center h-full">
+          <div className="flex space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Edit2 size={16} />}
+              onClick={() => handleEditClick(employee)}
+            >
+              Editar
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={employee.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
+              onClick={() => employeesData.toggleEmployeeStatus(employee)}
+              disabled={employeesData.processingEmployeeId === employee.id}
+            >
+              {employeesData.processingEmployeeId === employee.id
+                ? 'Procesando...'
+                : employee.isActive ? 'Desactivar' : 'Activar'}
+            </Button>
+          </div>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -87,80 +161,11 @@ const Employees: React.FC = () => {
         {employeesData.isLoading ? renderLoadingState() :
          employeesData.employees.length === 0 ? renderEmptyState() : (
           <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {employeesData.employees.map((employee) => (
-                    <tr key={employee.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                              <User size={20} className="text-primary-600" />
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {employee.firstName} {employee.lastName}
-                            </div>
-                            <div className="text-sm text-gray-500">{employee.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
-                          {employee.role === Role.ADMINISTRATOR ? 'Administrador' : 'Vendedor'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            employee.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {employee.isActive ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={<Edit2 size={16} />}
-                            onClick={() => handleEditClick(employee)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={employee.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                            onClick={() => employeesData.toggleEmployeeStatus(employee)}
-                            disabled={employeesData.processingEmployeeId === employee.id}
-                          >
-                            {employeesData.processingEmployeeId === employee.id
-                              ? 'Procesando...'
-                              : employee.isActive ? 'Desactivar' : 'Activar'
-                            }
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
+            <Table
+              columns={columns}
+              data={employeesData.employees}
+              rowKeyExtractor={(employee) => employee.id}
+            />
             {employeesData.totalPages > 1 && (
               <div className="flex justify-center items-center mt-8 space-x-2">
                 <Button

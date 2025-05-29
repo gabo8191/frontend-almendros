@@ -4,6 +4,7 @@ import { Client } from '../../api/client/clientService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import Spinner from '../../../../shared/components/Spinner';
 import EditClientModal from './EditClientModal';
 import NewClientModal from './NewClient';
 import ClientsTable from './ClientsTable';
@@ -63,7 +64,7 @@ const Clients: React.FC = () => {
 
   const renderLoadingState = () => (
     <div className="text-center py-12">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+      <Spinner size="lg" className="mx-auto" />
       <p className="mt-4 text-gray-600">Cargando clientes...</p>
     </div>
   );
