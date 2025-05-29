@@ -2,6 +2,7 @@ import React from 'react';
 import { User, Edit2, UserX, UserCheck } from 'lucide-react';
 import { Client } from '../../api/client/clientService';
 import Button from '../../../../shared/components/Button';
+import Table from '../../../../shared/components/Table';
 
 interface ClientsTableProps {
   clients: Client[];
@@ -41,7 +42,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
   );
 
   const ActionButtons = ({ client }: { client: Client }) => (
-    <div className="flex justify-end space-x-2">
+    <div className="flex space-x-2">
       <Button
         variant="ghost"
         size="sm"
@@ -59,9 +60,72 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
       >
         {processingClientId === client.id 
           ? 'Procesando...' 
-          : client.isActive ? 'Desactivar' : 'Activar'
-        }
+          : client.isActive ? 'Desactivar' : 'Activar'}
       </Button>
+    </div>
+  );
+
+  const columns: any[] = [
+    {
+      header: 'Cliente',
+      renderCell: (client: Client) => (
+        <div className="flex items-center">
+          <ClientAvatar />
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{client.name}</div>
+            <div className="text-sm text-gray-500">{client.email}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Documento',
+      renderCell: (client: Client) => (
+        <div>
+          <div className="text-sm text-gray-900">{client.documentType}</div>
+          <div className="text-sm text-gray-500">{client.documentNumber}</div>
+        </div>
+      ),
+    },
+    {
+      header: 'Estado',
+      renderCell: (client: Client) => <StatusBadge isActive={client.isActive} />,
+    },
+  ];
+
+  if (isAdmin) {
+    columns.push({
+      header: 'Acciones',
+      headerClassName: 'text-center',
+      renderCell: (client: Client) => (
+        <div className="flex justify-center items-center h-full">
+          <ActionButtons client={client} />
+        </div>
+      ),
+    });
+  }
+
+  const renderMobileCard = (client: Client) => (
+    <div className="bg-white border rounded-lg p-4 shadow-sm">
+      <div className="flex items-center mb-3">
+        <ClientAvatar />
+        <div className="ml-4 flex-1">
+          <div className="text-sm font-medium text-gray-900">{client.name}</div>
+          <div className="text-sm text-gray-500">{client.email}</div>
+        </div>
+        <StatusBadge isActive={client.isActive} />
+      </div>
+      
+      <div className="mb-3">
+        <div className="text-sm text-gray-900">{client.documentType}</div>
+        <div className="text-sm text-gray-500">{client.documentNumber}</div>
+      </div>
+
+      {isAdmin && (
+        <div className="flex justify-center items-center">
+           <ActionButtons client={client} />
+        </div>
+      )}
     </div>
   );
 
@@ -110,70 +174,12 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
 
   return (
     <>
-      {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-              {isAdmin && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {clients.map((client) => (
-              <tr key={client.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <ClientAvatar />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{client.name}</div>
-                      <div className="text-sm text-gray-500">{client.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{client.documentType}</div>
-                  <div className="text-sm text-gray-500">{client.documentNumber}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <StatusBadge isActive={client.isActive} />
-                </td>
-                {isAdmin && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <ActionButtons client={client} />
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-4">
-        {clients.map((client) => (
-          <div key={client.id} className="bg-white border rounded-lg p-4 shadow-sm">
-            <div className="flex items-center mb-3">
-              <ClientAvatar />
-              <div className="ml-4 flex-1">
-                <div className="text-sm font-medium text-gray-900">{client.name}</div>
-                <div className="text-sm text-gray-500">{client.email}</div>
-              </div>
-              <StatusBadge isActive={client.isActive} />
-            </div>
-            
-            <div className="mb-3">
-              <div className="text-sm text-gray-900">{client.documentType}</div>
-              <div className="text-sm text-gray-500">{client.documentNumber}</div>
-            </div>
-
-            {isAdmin && <ActionButtons client={client} />}
-          </div>
-        ))}
-      </div>
-
+      <Table
+        columns={columns}
+        data={clients}
+        rowKeyExtractor={(client) => client.id}
+        renderMobileCard={renderMobileCard}
+      />
       <Pagination />
     </>
   );

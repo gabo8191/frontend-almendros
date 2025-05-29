@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Search, Plus, UserX, UserCheck } from 'lucide-react';
+import { Truck, Search, Plus, UserX, UserCheck, Edit2 } from 'lucide-react';
 import { supplierService, Supplier } from '../../api/supplier/supplierService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
+import Spinner from '../../../../shared/components/Spinner';
+import Table from '../../../../shared/components/Table';
 import { useToast } from '../../../../shared/context/ToastContext';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { Role } from '../../../auth/types';
@@ -72,6 +74,146 @@ const SuppliersPage: React.FC = () => {
     }
   };
 
+  const handleEditClick = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setIsEditModalOpen(true);
+  };
+
+  const ActionButtons = ({ supplier }: { supplier: Supplier }) => (
+    <div className="flex space-x-2">
+      <Button variant="ghost" size="sm" icon={<Edit2 size={16}/>} onClick={() => handleEditClick(supplier)}>
+        Editar
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={supplier.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
+        onClick={() => handleToggleStatus(supplier)}
+      >
+        {supplier.isActive ? 'Desactivar' : 'Activar'}
+      </Button>
+    </div>
+  );
+
+  const columns: any[] = [
+    {
+      header: 'Proveedor',
+      renderCell: (supplier: Supplier) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+              <Truck size={20} className="text-primary-600" />
+            </div>
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
+            <div className="text-sm text-gray-500">{supplier.email}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: 'Contacto',
+      renderCell: (supplier: Supplier) => (
+        <div>
+          <div className="text-sm text-gray-900">{supplier.contactName}</div>
+          <div className="text-sm text-gray-500">{supplier.phoneNumber}</div>
+        </div>
+      ),
+    },
+    {
+      header: 'Documento',
+      renderCell: (supplier: Supplier) => (
+        <div>
+          <div className="text-sm text-gray-900">{supplier.documentType}</div>
+          <div className="text-sm text-gray-500">{supplier.documentNumber}</div>
+        </div>
+      ),
+    },
+    {
+      header: 'Estado',
+      renderCell: (supplier: Supplier) => (
+        <span
+          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+            supplier.isActive
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {supplier.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+  ];
+
+  if (isAdmin) {
+    columns.push({
+      header: 'Acciones',
+      headerClassName: 'text-center',
+      renderCell: (supplier: Supplier) => (
+        <div className="flex justify-center items-center h-full">
+          <ActionButtons supplier={supplier} />
+        </div>
+      ),
+    });
+  }
+  
+  const renderMobileCard = (supplier: Supplier) => (
+    <div className="bg-white border rounded-lg p-4 shadow-sm">
+      <div className="flex items-start mb-3">
+        <div className="flex-shrink-0 h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+          <Truck size={20} className="text-primary-600" />
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
+          <div className="text-xs text-gray-500">{supplier.email}</div>
+        </div>
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ supplier.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }`}>
+            {supplier.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      </div>
+      <div className="text-sm text-gray-700 mb-1">
+        <span className="font-medium">Contacto:</span> {supplier.contactName} ({supplier.phoneNumber})
+      </div>
+      <div className="text-sm text-gray-700 mb-3">
+        <span className="font-medium">Documento:</span> {supplier.documentType} {supplier.documentNumber}
+      </div>
+      {isAdmin && (
+        <div className="flex justify-center items-center border-t pt-3 mt-3">
+          <ActionButtons supplier={supplier} />
+        </div>
+      )}
+    </div>
+  );
+
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+    return (
+        <div className="flex justify-center mt-6 space-x-2">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
+                Anterior
+            </Button>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
+                Siguiente
+            </Button>
+        </div>
+    );
+  };
+  
+  const EmptyState = () => (
+    <div className="text-center py-8">
+        <Truck size={48} className="mx-auto text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        No se encontraron proveedores
+        </h3>
+        <p className="text-gray-600">
+        {searchTerm
+            ? 'No hay resultados para tu búsqueda'
+            : 'Aún no hay proveedores registrados'}
+        </p>
+    </div>
+  );
+
   return (
     <div>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
@@ -102,131 +244,22 @@ const SuppliersPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <div className="text-center py-12">
+            <Spinner size="lg" className="mx-auto" />
             <p className="mt-4 text-gray-600">Cargando proveedores...</p>
           </div>
         ) : suppliers.length === 0 ? (
-          <div className="text-center py-8">
-            <Truck size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No se encontraron proveedores
-            </h3>
-            <p className="text-gray-600">
-              {searchTerm
-                ? 'No hay resultados para tu búsqueda'
-                : 'Aún no hay proveedores registrados'}
-            </p>
-          </div>
+          <EmptyState />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Proveedor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contacto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documento
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  {isAdmin && (
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Acciones
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {suppliers.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                            <Truck size={20} className="text-primary-600" />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                          <div className="text-sm text-gray-500">{supplier.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{supplier.contactName}</div>
-                      <div className="text-sm text-gray-500">{supplier.phoneNumber}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{supplier.documentType}</div>
-                      <div className="text-sm text-gray-500">{supplier.documentNumber}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          supplier.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {supplier.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSupplier(supplier);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={supplier.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-                            onClick={() => handleToggleStatus(supplier)}
-                          >
-                            {supplier.isActive ? 'Desactivar' : 'Activar'}
-                          </Button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="flex justify-center mt-6 space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Siguiente
-            </Button>
-          </div>
+          <>
+            <Table 
+                columns={columns} 
+                data={suppliers} 
+                rowKeyExtractor={(supplier) => supplier.id}
+                renderMobileCard={renderMobileCard} 
+            />
+            <Pagination />
+          </>
         )}
       </Card>
 
