@@ -274,10 +274,10 @@ const SalesPage: React.FC = () => {
       />
 
       <SaleDetailsModal
-        isOpen={saleDetailsData.isModalOpen}
-        onClose={saleDetailsData.closeModal}
-        saleId={saleDetailsData.selectedSaleId}
-        isFetchingDetails={saleDetailsData.isFetchingDetails}
+        isOpen={saleDetailsData.isDetailsModalOpen}
+        onClose={saleDetailsData.handleCloseDetailsModal}
+        sale={saleDetailsData.selectedSale}
+        isLoading={saleDetailsData.isFetchingDetails}
       />
     </div>
   );
