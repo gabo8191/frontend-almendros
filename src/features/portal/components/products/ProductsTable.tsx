@@ -1,25 +1,18 @@
 import React from 'react';
-import { Package, Plus, Edit2, Settings } from 'lucide-react';
+import { Package, Edit2, Settings } from 'lucide-react';
 import { Product } from '../../api/product/types';
-import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
-import Spinner from '../../../../shared/components/Spinner';
 import Table from '../../../../shared/components/Table';
-import ProductsSearch from './ProductsSearch';
 import ProductsPagination from './ProductsPagination';
 
 interface ProductsTableProps {
   products: Product[];
-  isLoading: boolean;
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
   currentPage: number;
   totalPages: number;
   totalItems: number;
   isAdmin: boolean;
   onEditProduct: (product: Product) => void;
   onAdjustStock: (product: Product) => void;
-  onNewProduct: () => void;
   formatPrice: (price: number | string | null) => string;
   getCurrentPrices: (product: Product) => { selling: number; purchase: number };
   getStockStatus: (product: Product) => { status: string; color: string };
@@ -28,47 +21,17 @@ interface ProductsTableProps {
 
 const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
-  isLoading,
-  searchTerm,
-  setSearchTerm,
   currentPage,
   totalPages,
   totalItems,
   isAdmin,
   onEditProduct,
   onAdjustStock,
-  onNewProduct,
   formatPrice,
   getCurrentPrices,
   getStockStatus,
   handlePageChange,
 }) => {
-  const EmptyState = () => (
-    <div className="text-center py-12">
-      <Package size={48} className="mx-auto text-gray-400 mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">
-        No se encontraron productos
-      </h3>
-      <p className="text-gray-600">
-        {searchTerm
-          ? 'No hay resultados para tu búsqueda'
-          : 'Aún no hay productos registrados'}
-      </p>
-      {isAdmin && !searchTerm && (
-        <Button className="mt-4" icon={<Plus size={16} />} onClick={onNewProduct}>
-          Crear primer producto
-        </Button>
-      )}
-    </div>
-  );
-
-  const LoadingState = () => (
-    <div className="text-center py-12">
-      <Spinner size="lg" className="mx-auto" />
-      <p className="mt-4 text-gray-600">Cargando productos...</p>
-    </div>
-  );
-
   const ActionButtons = ({ product }: { product: Product }) => (
     <div className="flex space-x-2">
         <Button variant="ghost" size="sm" icon={<Edit2 size={16} />} onClick={() => onEditProduct(product)}>
@@ -170,27 +133,20 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   };
 
   return (
-    <Card>
-      <ProductsSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-
-      {isLoading ? <LoadingState /> : 
-       products.length === 0 ? <EmptyState /> : (
-        <>
-          <Table
-            columns={columns}
-            data={products}
-            rowKeyExtractor={(product) => product.id}
-            renderMobileCard={renderMobileCard}
-          />
-          <ProductsPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            handlePageChange={handlePageChange}
-          />
-        </>
-      )}
-    </Card>
+    <>
+      <Table
+        columns={columns}
+        data={products}
+        rowKeyExtractor={(product) => product.id}
+        renderMobileCard={renderMobileCard}
+      />
+      <ProductsPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        handlePageChange={handlePageChange}
+      />
+    </>
   );
 };
 
