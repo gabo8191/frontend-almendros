@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Truck, Search, Plus, UserX, UserCheck, Edit2 } from 'lucide-react';
+import { Truck, Search, Plus } from 'lucide-react';
 import { supplierService, Supplier } from '../../api/supplier/supplierService';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import Spinner from '../../../../shared/components/Spinner';
-import Table from '../../../../shared/components/Table';
 import { useToast } from '../../../../shared/context/ToastContext';
 import { useAuth } from '../../../auth/context/AuthContext';
 import { Role } from '../../../auth/types';
 import NewSupplierModal from './NewSupplierModal';
 import EditSupplierModal from './EditSupplierModal';
+import SuppliersTable from './SuppliersTable';
 
 const SuppliersPage: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -21,29 +21,25 @@ const SuppliersPage: React.FC = () => {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [processingSupplierId, setProcessingSupplierId] = useState<number | string | null>(null);
   const { showToast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === Role.ADMINISTRATOR;
 
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = async (pageToFetch = currentPage, currentSearchTerm = searchTerm) => {
+    setIsLoading(true);
     try {
-      const response = await supplierService.getSuppliers(currentPage, 10, {
-        search: searchTerm || undefined,
+      const response = await supplierService.getSuppliers(pageToFetch, 10, {
+        search: currentSearchTerm || undefined,
       });
       
-      // Log the response to see what's actually coming back
-      console.log('Supplier response:', response);
-      
-      // Check if we have valid data and meta properties
       if (response && response.data) {
         setSuppliers(response.data);
+        setTotalPages(response.meta?.totalPages || 1);
       } else {
         setSuppliers([]);
+        setTotalPages(1);
       }
-      
-      // Safely access totalPages with optional chaining and default value
-      setTotalPages(response?.meta?.totalPages || 1);
-      
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       setSuppliers([]);
@@ -53,12 +49,18 @@ const SuppliersPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+  
+  useEffect(() => {
+    fetchSuppliers(1, searchTerm);
+    if (currentPage !== 1) setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
-    fetchSuppliers();
-  }, [currentPage, searchTerm]);
+    fetchSuppliers(currentPage, searchTerm);
+  }, [currentPage]);
 
   const handleToggleStatus = async (supplier: Supplier) => {
+    setProcessingSupplierId(supplier.id);
     try {
       if (supplier.isActive) {
         await supplierService.deactivateSupplier(supplier.id);
@@ -67,10 +69,12 @@ const SuppliersPage: React.FC = () => {
         await supplierService.activateSupplier(supplier.id);
         showToast('success', 'Proveedor activado exitosamente');
       }
-      await fetchSuppliers();
+      await fetchSuppliers(currentPage, searchTerm);
     } catch (error) {
       console.error('Error toggling supplier status:', error);
       showToast('error', 'Error al cambiar el estado del proveedor');
+    } finally {
+      setProcessingSupplierId(null);
     }
   };
 
@@ -78,128 +82,11 @@ const SuppliersPage: React.FC = () => {
     setSelectedSupplier(supplier);
     setIsEditModalOpen(true);
   };
-
-  const ActionButtons = ({ supplier }: { supplier: Supplier }) => (
-    <div className="flex space-x-2">
-      <Button variant="ghost" size="sm" icon={<Edit2 size={16}/>} onClick={() => handleEditClick(supplier)}>
-        Editar
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon={supplier.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-        onClick={() => handleToggleStatus(supplier)}
-      >
-        {supplier.isActive ? 'Desactivar' : 'Activar'}
-      </Button>
-    </div>
-  );
-
-  const columns: any[] = [
-    {
-      header: 'Proveedor',
-      renderCell: (supplier: Supplier) => (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
-            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-              <Truck size={20} className="text-primary-600" />
-            </div>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-            <div className="text-sm text-gray-500">{supplier.email}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Contacto',
-      renderCell: (supplier: Supplier) => (
-        <div>
-          <div className="text-sm text-gray-900">{supplier.contactName}</div>
-          <div className="text-sm text-gray-500">{supplier.phoneNumber}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Documento',
-      renderCell: (supplier: Supplier) => (
-        <div>
-          <div className="text-sm text-gray-900">{supplier.documentType}</div>
-          <div className="text-sm text-gray-500">{supplier.documentNumber}</div>
-        </div>
-      ),
-    },
-    {
-      header: 'Estado',
-      renderCell: (supplier: Supplier) => (
-        <span
-          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-            supplier.isActive
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {supplier.isActive ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-  ];
-
-  if (isAdmin) {
-    columns.push({
-      header: 'Acciones',
-      headerClassName: 'text-center',
-      renderCell: (supplier: Supplier) => (
-        <div className="flex justify-center items-center h-full">
-          <ActionButtons supplier={supplier} />
-        </div>
-      ),
-    });
-  }
   
-  const renderMobileCard = (supplier: Supplier) => (
-    <div className="bg-white border rounded-lg p-4 shadow-sm">
-      <div className="flex items-start mb-3">
-        <div className="flex-shrink-0 h-10 w-10 bg-primary-100 rounded-full flex items-center justify-center mr-3">
-          <Truck size={20} className="text-primary-600" />
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-          <div className="text-xs text-gray-500">{supplier.email}</div>
-        </div>
-        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${ supplier.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }`}>
-            {supplier.isActive ? 'Activo' : 'Inactivo'}
-        </span>
-      </div>
-      <div className="text-sm text-gray-700 mb-1">
-        <span className="font-medium">Contacto:</span> {supplier.contactName} ({supplier.phoneNumber})
-      </div>
-      <div className="text-sm text-gray-700 mb-3">
-        <span className="font-medium">Documento:</span> {supplier.documentType} {supplier.documentNumber}
-      </div>
-      {isAdmin && (
-        <div className="flex justify-center items-center border-t pt-3 mt-3">
-          <ActionButtons supplier={supplier} />
-        </div>
-      )}
-    </div>
-  );
-
-  const Pagination = () => {
-    if (totalPages <= 1) return null;
-    return (
-        <div className="flex justify-center mt-6 space-x-2">
-            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>
-                Anterior
-            </Button>
-            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>
-                Siguiente
-            </Button>
-        </div>
-    );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
-  
+
   const EmptyState = () => (
     <div className="text-center py-8">
         <Truck size={48} className="mx-auto text-gray-400 mb-4" />
@@ -251,54 +138,44 @@ const SuppliersPage: React.FC = () => {
         ) : suppliers.length === 0 ? (
           <EmptyState />
         ) : (
-          <>
-            <Table 
-                columns={columns} 
-                data={suppliers} 
-                rowKeyExtractor={(supplier) => supplier.id}
-                renderMobileCard={renderMobileCard} 
-            />
-            <Pagination />
-          </>
+          <SuppliersTable
+            suppliers={suppliers}
+            isAdmin={isAdmin}
+            processingSupplierId={processingSupplierId}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            toggleSupplierStatus={handleToggleStatus}
+            handlePageChange={handlePageChange}
+            onEditClick={handleEditClick}
+          />
         )}
       </Card>
 
-      <NewSupplierModal
-        isOpen={isNewModalOpen}
-        onClose={() => setIsNewModalOpen(false)}
-        onSave={async (supplierData) => {
-          try {
-            await supplierService.createSupplier(supplierData);
-            showToast('success', 'Proveedor creado exitosamente');
-            await fetchSuppliers();
-            return true;
-          } catch (error) {
-            console.error('Error creating supplier:', error);
-            showToast('error', 'Error al crear el proveedor');
-            return false;
-          }
-        }}
-      />
+      {isNewModalOpen && (
+        <NewSupplierModal
+          isOpen={isNewModalOpen}
+          onClose={() => setIsNewModalOpen(false)}
+          onSuccess={() => {
+            setIsNewModalOpen(false);
+            fetchSuppliers(1, '');
+            if (currentPage !== 1) setCurrentPage(1);
+            if (searchTerm !== '') setSearchTerm('');
+          }}
+        />
+      )}
 
-      {selectedSupplier && (
+      {selectedSupplier && isEditModalOpen && (
         <EditSupplierModal
+          supplier={selectedSupplier}
           isOpen={isEditModalOpen}
           onClose={() => {
             setIsEditModalOpen(false);
             setSelectedSupplier(null);
           }}
-          supplier={selectedSupplier}
-          onSave={async (supplierData) => {
-            try {
-              await supplierService.updateSupplier(selectedSupplier.id, supplierData);
-              showToast('success', 'Proveedor actualizado exitosamente');
-              await fetchSuppliers();
-              return true;
-            } catch (error) {
-              console.error('Error updating supplier:', error);
-              showToast('error', 'Error al actualizar el proveedor');
-              return false;
-            }
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+            setSelectedSupplier(null);
+            fetchSuppliers(currentPage, searchTerm);
           }}
         />
       )}
