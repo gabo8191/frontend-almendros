@@ -46,7 +46,7 @@ const SalesTable: React.FC<SalesTableProps> = ({
       sortKey: 'saleDate',
       isSortable: true,
       renderCell: (sale: Sale) => formatDate(sale.saleDate),
-      cellClassName: 'text-sm text-gray-900',
+      cellClassName: 'text-sm text-gray-900 whitespace-normal',
     },
     {
       header: 'Cliente',
@@ -64,6 +64,7 @@ const SalesTable: React.FC<SalesTableProps> = ({
           </div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Total',
@@ -194,6 +195,7 @@ const SalesTable: React.FC<SalesTableProps> = ({
         currentSortConfig={currentSortConfig}
         onSort={onSort}
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       {totalPages > 0 && <Pagination />}
     </>

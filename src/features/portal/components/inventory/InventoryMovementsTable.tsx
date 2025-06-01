@@ -70,6 +70,7 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
     {
       header: 'Fecha',
       renderCell: (movement: InventoryMovement) => formatDate(movement.movementDate),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Tipo',
@@ -83,6 +84,7 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
           <div className="text-sm text-gray-500">Stock actual: {movement.product.currentStock}</div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Cantidad',
@@ -99,6 +101,7 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
           )}
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Usuario',
@@ -110,6 +113,7 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
           <div className="text-sm text-gray-500">{movement.user.email}</div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
   ];
 
@@ -167,6 +171,7 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
         data={movements} 
         rowKeyExtractor={(movement) => movement.id} 
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       <Pagination />
     </>

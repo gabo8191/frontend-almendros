@@ -77,6 +77,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
           </div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Contacto',
@@ -86,6 +87,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
           <div className="text-sm text-gray-500">{supplier.phoneNumber || 'N/A'}</div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Documento',
@@ -95,6 +97,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
           <div className="text-sm text-gray-500">{supplier.documentNumber || 'N/A'}</div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Estado',
@@ -197,6 +200,7 @@ const SuppliersTable: React.FC<SuppliersTableProps> = ({
         data={suppliers}
         rowKeyExtractor={(supplier) => supplier.id}
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       {totalPages > 0 && <Pagination />}
     </>
