@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { User, Edit2, UserX, UserCheck, Search, Plus, RefreshCw } from 'lucide-react';
-import { User as UserType, Role } from '../../../auth/types';
+import { User, Search, Plus, RefreshCw } from 'lucide-react';
+import { User as UserType } from '../../../auth/types';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import Spinner from '../../../../shared/components/Spinner';
-import Table from '../../../../shared/components/Table';
 import EditEmployeeModal from './EditEmployeeModal';
 import NewEmployeeModal from './NewEmployeeModal';
 import { useEmployees } from './hooks/useEmployees';
+import EmployeesTable from './EmployeesTable';
 
 const Employees: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<UserType | null>(null);
@@ -51,78 +51,6 @@ const Employees: React.FC = () => {
     </div>
   );
   
-  const columns = [
-    {
-      header: 'Empleado',
-      renderCell: (employee: UserType) => (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
-            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-              <User size={20} className="text-primary-600" />
-            </div>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
-              {employee.firstName} {employee.lastName}
-            </div>
-            <div className="text-sm text-gray-500">{employee.email}</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Rol',
-      renderCell: (employee: UserType) => (
-        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-primary-100 text-primary-800">
-          {employee.role === Role.ADMINISTRATOR ? 'Administrador' : 'Vendedor'}
-        </span>
-      ),
-    },
-    {
-      header: 'Estado',
-      renderCell: (employee: UserType) => (
-        <span
-          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-            employee.isActive
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {employee.isActive ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-    {
-      header: 'Acciones',
-      headerClassName: 'text-center',
-      renderCell: (employee: UserType) => (
-        <div className="flex justify-center items-center h-full">
-          <div className="flex space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Edit2 size={16} />}
-              onClick={() => handleEditClick(employee)}
-            >
-              Editar
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={employee.isActive ? <UserX size={16} /> : <UserCheck size={16} />}
-              onClick={() => employeesData.toggleEmployeeStatus(employee)}
-              disabled={employeesData.processingEmployeeId === employee.id}
-            >
-              {employeesData.processingEmployeeId === employee.id
-                ? 'Procesando...'
-                : employee.isActive ? 'Desactivar' : 'Activar'}
-            </Button>
-          </div>
-        </div>
-      ),
-    },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -160,33 +88,15 @@ const Employees: React.FC = () => {
 
         {employeesData.isLoading ? renderLoadingState() :
          employeesData.employees.length === 0 ? renderEmptyState() : (
-          <>
-            <Table
-              columns={columns}
-              data={employeesData.employees}
-              rowKeyExtractor={(employee) => employee.id}
-            />
-            {employeesData.totalPages > 1 && (
-              <div className="flex justify-center items-center mt-8 space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={employeesData.currentPage === 1}
-                  onClick={() => employeesData.handlePageChange(employeesData.currentPage - 1)}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={employeesData.currentPage === employeesData.totalPages}
-                  onClick={() => employeesData.handlePageChange(employeesData.currentPage + 1)}
-                >
-                  Siguiente
-                </Button>
-              </div>
-            )}
-          </>
+          <EmployeesTable 
+            employees={employeesData.employees}
+            processingEmployeeId={employeesData.processingEmployeeId}
+            currentPage={employeesData.currentPage}
+            totalPages={employeesData.totalPages}
+            toggleEmployeeStatus={employeesData.toggleEmployeeStatus}
+            handlePageChange={employeesData.handlePageChange}
+            onEditClick={handleEditClick}
+          />
         )}
       </Card>
 

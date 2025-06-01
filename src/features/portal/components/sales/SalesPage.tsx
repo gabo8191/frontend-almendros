@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Search, Plus, Calendar, User, Eye, RefreshCw } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Calendar, RefreshCw } from 'lucide-react';
 import Card from '../../../../shared/components/Card';
 import Button from '../../../../shared/components/Button';
 import Input from '../../../../shared/components/Input';
 import Spinner from '../../../../shared/components/Spinner';
-import Table from '../../../../shared/components/Table';
 import NewSaleModal from './NewSaleModal';
 import SaleDetailsModal from './SaleDetailsModal';
 import { useSales } from './hooks/useSales';
 import { useSaleDetails } from './hooks/useSaleDetails';
-import { Sale } from '../../api/sale/saleService';
+import SalesTable from './SalesTable';
 
 const SalesPage: React.FC = () => {
   const [isNewSaleModalOpen, setIsNewSaleModalOpen] = useState(false);
@@ -21,104 +20,6 @@ const SalesPage: React.FC = () => {
     setIsNewSaleModalOpen(false);
     salesData.handleRefresh();
   };
-  
-  const columns: any[] = [
-    {
-      header: 'ID',
-      accessor: 'id',
-      sortKey: 'id',
-      isSortable: true,
-      renderCell: (sale: Sale) => `#${sale.id}`,
-      cellClassName: 'text-sm font-medium text-gray-900',
-    },
-    {
-      header: 'Fecha',
-      sortKey: 'saleDate',
-      isSortable: true,
-      renderCell: (sale: Sale) => salesData.formatDate(sale.saleDate),
-      cellClassName: 'text-sm text-gray-900',
-    },
-    {
-      header: 'Cliente',
-      renderCell: (sale: Sale) => (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
-            <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-              <User size={20} className="text-primary-600" />
-            </div>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
-              {sale.client?.name || 'Cliente no disponible'}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      header: 'Total',
-      renderCell: (sale: Sale) => salesData.formatCurrency(sale.totalAmount),
-      cellClassName: 'text-sm font-semibold text-gray-900',
-    },
-    {
-      header: 'Acciones',
-      headerClassName: 'text-center',
-      renderCell: (sale: Sale) => (
-        <div className="flex justify-center items-center h-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Eye size={16} />}
-            onClick={() => saleDetailsData.handleViewDetails(sale.id)}
-            disabled={saleDetailsData.isFetchingDetails}
-          >
-            Ver Detalles
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
-  const renderMobileCard = (sale: Sale) => (
-    <div className="bg-white border rounded-lg p-4 shadow-sm">
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <div className="text-sm font-medium text-gray-500">Venta #{sale.id}</div>
-          <div className="text-lg font-bold text-gray-900">
-            {salesData.formatCurrency(sale.totalAmount)}
-          </div>
-        </div>
-        <div className="text-sm text-gray-500 text-right">
-          {salesData.formatDate(sale.saleDate)}
-        </div>
-      </div>
-      
-      <div className="flex items-center mb-3">
-        <div className="flex-shrink-0 h-8 w-8">
-          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
-            <User size={16} className="text-primary-600" />
-          </div>
-        </div>
-        <div className="ml-3">
-          <div className="text-sm font-medium text-gray-900">
-            {sale.client?.name || 'Cliente no disponible'}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          icon={<Eye size={14} />}
-          onClick={() => saleDetailsData.handleViewDetails(sale.id)}
-          disabled={saleDetailsData.isFetchingDetails}
-        >
-          Ver Detalles
-        </Button>
-      </div>
-    </div>
-  );
   
   const EmptyState = () => (
     <div className="text-center py-12">
@@ -141,44 +42,12 @@ const SalesPage: React.FC = () => {
     </div>
   );
 
-  const Pagination = () => {
-    if (salesData.totalPages <= 1) return null;
-    return (
-        <div className="flex justify-center items-center mt-8 space-x-2">
-            <Button
-            variant="outline"
-            size="sm"
-            disabled={salesData.currentPage === 1}
-            onClick={() => salesData.handlePageChange(salesData.currentPage - 1)}
-            >
-            Anterior
-            </Button>
-            {[...Array(Math.min(5, salesData.totalPages))].map((_, i) => {
-                const pageNum = salesData.currentPage <= 3 ? i + 1 : salesData.currentPage - 2 + i;
-                if (pageNum <= 0 || pageNum > salesData.totalPages) return null;
-                return (
-                    <Button
-                        key={pageNum}
-                        variant={pageNum === salesData.currentPage ? undefined : "outline"}
-                        size="sm"
-                        onClick={() => salesData.handlePageChange(pageNum)}
-                        className="w-8 h-8 p-0"
-                    >
-                        {pageNum}
-                    </Button>
-                );
-            })}
-            <Button
-            variant="outline"
-            size="sm"
-            disabled={salesData.currentPage === salesData.totalPages}
-            onClick={() => salesData.handlePageChange(salesData.currentPage + 1)}
-            >
-            Siguiente
-            </Button>
-        </div>
-    );
-  };
+  const renderLoadingState = () => (
+    <div className="text-center py-12">
+      <Spinner size="lg" className="mx-auto" />
+      <p className="mt-4 text-gray-600">Cargando ventas...</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -245,26 +114,22 @@ const SalesPage: React.FC = () => {
           </div>
         </div>
 
-        {salesData.isLoading ? (
-          <div className="text-center py-12">
-            <Spinner size="lg" className="mx-auto" />
-            <p className="mt-4 text-gray-600">Cargando ventas...</p>
-          </div>
-        ) : salesData.sales.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <>
-            <Table
-              columns={columns}
-              data={salesData.sales}
-              rowKeyExtractor={(sale) => sale.id}
-              currentSortConfig={salesData.sortConfig}
-              onSort={salesData.handleSort}
-              renderMobileCard={renderMobileCard}
-            />
-            <Pagination />
-          </>
-        )}
+        {salesData.isLoading ? renderLoadingState() :
+         salesData.sales.length === 0 ? <EmptyState /> :
+          <SalesTable 
+            sales={salesData.sales}
+            currentPage={salesData.currentPage}
+            totalPages={salesData.totalPages}
+            totalSales={salesData.totalSales}
+            isFetchingDetails={saleDetailsData.isFetchingDetails}
+            currentSortConfig={salesData.sortConfig}
+            formatDate={salesData.formatDate}
+            formatCurrency={salesData.formatCurrency}
+            handlePageChange={salesData.handlePageChange}
+            onSort={salesData.handleSort}
+            onViewDetails={saleDetailsData.handleViewDetails}
+          />
+        }
       </Card>
 
       <NewSaleModal
@@ -274,10 +139,10 @@ const SalesPage: React.FC = () => {
       />
 
       <SaleDetailsModal
-        isOpen={saleDetailsData.isModalOpen}
-        onClose={saleDetailsData.closeModal}
-        saleId={saleDetailsData.selectedSaleId}
-        isFetchingDetails={saleDetailsData.isFetchingDetails}
+        isOpen={saleDetailsData.isDetailsModalOpen}
+        onClose={saleDetailsData.handleCloseDetailsModal}
+        sale={saleDetailsData.selectedSale}
+        isLoading={saleDetailsData.isFetchingDetails}
       />
     </div>
   );
