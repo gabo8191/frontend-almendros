@@ -78,7 +78,7 @@ const SalesPage: React.FC = () => {
         </div>
       </div>
 
-      <Card>
+      <Card compact>
         <div className="mb-6 space-y-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <Input

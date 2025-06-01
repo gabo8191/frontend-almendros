@@ -80,7 +80,7 @@ const Products: React.FC = () => {
 
       <LowStockAlert lowStockProducts={productsData.lowStockProducts} />
 
-      <Card>
+      <Card compact>
         <div className="mb-6">
           <Input
             icon={<Search size={18} />}

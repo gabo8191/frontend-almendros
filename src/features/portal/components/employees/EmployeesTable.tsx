@@ -88,6 +88,7 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
           </div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Rol',
@@ -187,6 +188,7 @@ const EmployeesTable: React.FC<EmployeesTableProps> = ({
         data={employees}
         rowKeyExtractor={(employee) => employee.id}
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       {totalPages > 0 && <Pagination />}
     </>

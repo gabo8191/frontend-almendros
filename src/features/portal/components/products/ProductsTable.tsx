@@ -57,6 +57,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
           </div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Stock Actual',
@@ -139,6 +140,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
         data={products}
         rowKeyExtractor={(product) => product.id}
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       <ProductsPagination
         currentPage={currentPage}

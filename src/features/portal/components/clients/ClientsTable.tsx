@@ -77,6 +77,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
           </div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Documento',
@@ -86,6 +87,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
           <div className="text-sm text-gray-500">{client.documentNumber}</div>
         </div>
       ),
+      cellClassName: 'whitespace-normal',
     },
     {
       header: 'Estado',
@@ -179,6 +181,7 @@ const ClientsTable: React.FC<ClientsTableProps> = ({
         data={clients}
         rowKeyExtractor={(client) => client.id}
         renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
       />
       <Pagination />
     </>

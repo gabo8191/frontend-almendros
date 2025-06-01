@@ -120,7 +120,7 @@ const SuppliersPage: React.FC = () => {
         )}
       </div>
 
-      <Card>
+      <Card compact>
         <div className="mb-6">
           <Input
             icon={<Search size={18} />}
