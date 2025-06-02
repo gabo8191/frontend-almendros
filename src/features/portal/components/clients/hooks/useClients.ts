@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { clientService, Client } from '../../../api/client/clientService';
 import { useToast } from '../../../../../shared/context/ToastContext';
 import { useAuth } from '../../../../auth/context/AuthContext';
@@ -12,31 +12,46 @@ export const useClients = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
   const [processingClientId, setProcessingClientId] = useState<number | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
   
   const { showToast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === Role.ADMINISTRATOR;
 
-  const fetchClients = async (page: number) => {
+  const fetchClientsInternal = useCallback(async (pageToFetch: number, termToSearch: string) => {
+    setIsLoading(true);
+    const filters: any = {};
+    if (termToSearch.trim()) {
+      filters.search = termToSearch.trim();
+    }
     try {
-      setIsLoading(true);
-      
-      const filters: any = {};
-      if (searchTerm.trim()) {
-        filters.search = searchTerm.trim();
-      }
-      
-      const response = await clientService.getClients(page, 10, filters);
+      const response = await clientService.getClients(pageToFetch, 10, filters);
       setClients(response.data);
       setTotalPages(response.meta.totalPages);
       setTotalClients(response.meta.total);
     } catch (error: any) {
       showToast('error', `Error al cargar los clientes: ${error.response?.data?.message || error.message}`);
       setClients([]);
+      setTotalPages(1);
+      setTotalClients(0);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchClientsInternal(currentPage, searchTerm);
+  }, [currentPage, searchTerm, fetchClientsInternal]);
+
+  useEffect(() => {
+    if (hasMounted) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      }
+    } else {
+      setHasMounted(true);
+    }
+  }, [searchTerm]);
 
   const toggleClientStatus = async (client: Client) => {
     if (!isAdmin) {
@@ -48,7 +63,7 @@ export const useClients = () => {
       setProcessingClientId(client.id);
       await clientService.toggleClientStatus(client.id, !client.isActive);
       showToast('success', `Cliente ${client.isActive ? 'desactivado' : 'activado'} exitosamente`);
-      fetchClients(currentPage);
+      fetchClientsInternal(currentPage, searchTerm);
     } catch (error: any) {
       let errorMessage = 'Error al cambiar el estado del cliente';
       
@@ -70,7 +85,7 @@ export const useClients = () => {
     try {
       await clientService.updateClient(clientId, updatedData);
       showToast('success', 'Cliente actualizado exitosamente');
-      fetchClients(currentPage);
+      fetchClientsInternal(currentPage, searchTerm);
       return true;
     } catch (error: any) {
       showToast('error', `Error al actualizar el cliente: ${error.response?.data?.message || error.message}`);
@@ -82,8 +97,11 @@ export const useClients = () => {
     try {
       await clientService.createClient(clientData);
       showToast('success', 'Cliente creado exitosamente');
-      setCurrentPage(1);
-      fetchClients(1);
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchClientsInternal(1, searchTerm);
+      }
       return true;
     } catch (error: any) {
       showToast('error', `Error al crear el cliente: ${error.response?.data?.message || error.message}`);
@@ -98,17 +116,8 @@ export const useClients = () => {
   };
 
   const refreshClients = () => {
-    fetchClients(currentPage);
+    fetchClientsInternal(currentPage, searchTerm);
   };
-
-  useEffect(() => {
-    setCurrentPage(1);
-    fetchClients(1);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    fetchClients(currentPage);
-  }, [currentPage]);
 
   return {
     clients,
