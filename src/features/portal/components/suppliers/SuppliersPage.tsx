@@ -41,10 +41,12 @@ const SuppliersPage: React.FC = () => {
         setTotalPages(1);
       }
     } catch (error) {
-      console.error('Error fetching suppliers:', error);
+      console.error(`Error fetching suppliers (search: "${currentSearchTerm}", page: ${pageToFetch}):`, error);
       setSuppliers([]);
       setTotalPages(1);
-      showToast('error', 'Error al cargar los proveedores');
+      if (!currentSearchTerm) {
+        showToast('error', 'Error al cargar los proveedores');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +60,34 @@ const SuppliersPage: React.FC = () => {
   useEffect(() => {
     fetchSuppliers(currentPage, searchTerm);
   }, [currentPage]);
+
+  const handleCreateSupplier = async (supplierData: Parameters<typeof supplierService.createSupplier>[0]): Promise<boolean> => {
+    try {
+      await supplierService.createSupplier(supplierData);
+      showToast('success', 'Proveedor creado exitosamente');
+      fetchSuppliers(1, ''); // Refresh list and go to first page, clear search
+      if (currentPage !== 1) setCurrentPage(1);
+      if (searchTerm !== '') setSearchTerm('');
+      return true; // Indicate success to the modal
+    } catch (error) {
+      console.error('Error creating supplier:', error);
+      showToast('error', 'Error al crear el proveedor');
+      return false; // Indicate failure to the modal
+    }
+  };
+
+  const handleUpdateSupplier = async (supplierId: number, supplierData: Parameters<typeof supplierService.updateSupplier>[1]): Promise<boolean> => {
+    try {
+      await supplierService.updateSupplier(supplierId, supplierData);
+      showToast('success', 'Proveedor actualizado exitosamente');
+      fetchSuppliers(currentPage, searchTerm); // Refresh current page
+      return true; // Indicate success to the modal
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+      showToast('error', 'Error al actualizar el proveedor');
+      return false; // Indicate failure to the modal
+    }
+  };
 
   const handleToggleStatus = async (supplier: Supplier) => {
     setProcessingSupplierId(supplier.id);
@@ -155,12 +185,7 @@ const SuppliersPage: React.FC = () => {
         <NewSupplierModal
           isOpen={isNewModalOpen}
           onClose={() => setIsNewModalOpen(false)}
-          onSuccess={() => {
-            setIsNewModalOpen(false);
-            fetchSuppliers(1, '');
-            if (currentPage !== 1) setCurrentPage(1);
-            if (searchTerm !== '') setSearchTerm('');
-          }}
+          onSave={handleCreateSupplier}
         />
       )}
 
@@ -172,11 +197,7 @@ const SuppliersPage: React.FC = () => {
             setIsEditModalOpen(false);
             setSelectedSupplier(null);
           }}
-          onSuccess={() => {
-            setIsEditModalOpen(false);
-            setSelectedSupplier(null);
-            fetchSuppliers(currentPage, searchTerm);
-          }}
+          onSave={(data) => handleUpdateSupplier(selectedSupplier.id, data)}
         />
       )}
     </div>

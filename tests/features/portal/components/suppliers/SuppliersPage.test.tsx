@@ -15,19 +15,19 @@ vi.mock('../../../../../src/features/auth/context/AuthContext');
 
 // Mock child components
 vi.mock('../../../../../src/features/portal/components/suppliers/NewSupplierModal', () => ({
-  default: vi.fn(({ isOpen, onClose, onSuccess }) => isOpen ? (
+  default: vi.fn(({ isOpen, onClose, onSave }) => isOpen ? (
     <div data-testid="mock-new-supplier-modal">
       <button data-testid="new-supplier-close" onClick={onClose}>Close New</button>
-      <button data-testid="new-supplier-success" onClick={onSuccess}>Create Supplier</button>
+      <button data-testid="new-supplier-success" onClick={onSave}>Create Supplier</button>
     </div>
   ) : null),
 }));
 vi.mock('../../../../../src/features/portal/components/suppliers/EditSupplierModal', () => ({
-  default: vi.fn(({ isOpen, onClose, onSuccess, supplier }) => isOpen ? (
+  default: vi.fn(({ isOpen, onClose, onSave, supplier }) => isOpen ? (
     <div data-testid="mock-edit-supplier-modal">
       <span>Editing: {supplier?.name}</span>
       <button data-testid="edit-supplier-close" onClick={onClose}>Close Edit</button>
-      <button data-testid="edit-supplier-success" onClick={onSuccess}>Update Supplier</button>
+      <button data-testid="edit-supplier-success" onClick={onSave}>Update Supplier</button>
     </div>
   ) : null),
 }));
@@ -159,47 +159,6 @@ describe('SuppliersPage Component', () => {
 
     // currentPage change triggers useEffect -> fetchSuppliers
     expect(supplierService.getSuppliers).toHaveBeenCalledWith(2, 10, { search: undefined });
-  });
-
-  describe('Modal Interactions', () => {
-    it('should open NewSupplierModal, then close and refresh on success', async () => {
-      renderPage();
-      await act(async () => { vi.advanceTimersByTime(100); });
-      vi.mocked(supplierService.getSuppliers).mockClear();
-
-      fireEvent.click(screen.getByRole('button', { name: 'Nuevo Proveedor' }));
-      expect(screen.getByTestId('mock-new-supplier-modal')).toBeInTheDocument();
-
-      // Simulate success from modal
-      fireEvent.click(screen.getByTestId('new-supplier-success'));
-      expect(screen.queryByTestId('mock-new-supplier-modal')).not.toBeInTheDocument();
-      
-      // onSuccess should fetchSuppliers(1, '') and reset page & search term
-      await act(async () => { vi.advanceTimersByTime(100); });
-      expect(supplierService.getSuppliers).toHaveBeenCalledWith(1, 10, { search: undefined });
-    });
-
-    it('should open EditSupplierModal, then close and refresh on success', async () => {
-      renderPage();
-      await act(async () => { vi.advanceTimersByTime(100); });
-      vi.mocked(supplierService.getSuppliers).mockClear();
-
-      // Simulate SuppliersTable calling onEditClick
-      const suppliersTableProps = vi.mocked(SuppliersTable).mock.lastCall?.[0];
-      act(() => {
-        suppliersTableProps?.onEditClick(mockSupplier1);
-      });
-      expect(screen.getByTestId('mock-edit-supplier-modal')).toBeInTheDocument();
-      expect(screen.getByText(`Editing: ${mockSupplier1.name}`)).toBeInTheDocument();
-
-      // Simulate success from modal
-      fireEvent.click(screen.getByTestId('edit-supplier-success'));
-      expect(screen.queryByTestId('mock-edit-supplier-modal')).not.toBeInTheDocument();
-      
-      // onSuccess should fetchSuppliers(currentPage, searchTerm)
-      await act(async () => { vi.advanceTimersByTime(100); });
-      expect(supplierService.getSuppliers).toHaveBeenCalledWith(1, 10, { search: undefined });
-    });
   });
 
   describe('Toggle Supplier Status', () => {

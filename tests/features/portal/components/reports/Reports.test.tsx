@@ -1,5 +1,4 @@
 /// <reference types="vitest/globals" />
-import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Reports from '../../../../../src/features/portal/components/reports/Reports';
