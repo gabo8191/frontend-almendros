@@ -2,6 +2,12 @@
 
 ## [unreleased]
 
+### Docs
+
+- Actualizar CHANGELOG.md para versión main
+
+## [2.1.0] - 2025-06-03
+
 ### Feat
 
 - Add tests for dashboard child components and login form
