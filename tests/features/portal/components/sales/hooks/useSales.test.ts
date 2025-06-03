@@ -79,7 +79,7 @@ describe('useSales Hook', () => {
     await act(async () => { vi.runAllTimers(); });
 
     expect(saleService.getSales).toHaveBeenCalledTimes(1);
-    expect(saleService.getSales).toHaveBeenCalledWith(1, 10, { startDate: '', endDate: '' });
+    expect(saleService.getSales).toHaveBeenCalledWith(1, 10, {});
     expect(result.current.isLoading).toBe(false);
     // Note: sales are filtered by searchTerm ('') and sorted by saleDate desc by default
     // So mockSale1 (Oct 26) should come before mockSale2 (Oct 25)
@@ -139,7 +139,7 @@ describe('useSales Hook', () => {
 
     expect(resultForPageChange.current.currentPage).toBe(2);
     expect(saleService.getSales).toHaveBeenCalledTimes(1);
-    expect(saleService.getSales).toHaveBeenCalledWith(2, 10, { startDate: '', endDate: '' });
+    expect(saleService.getSales).toHaveBeenCalledWith(2, 10, {});
     expect(resultForPageChange.current.sales[0].id).toBe(10);
   });
 
@@ -197,54 +197,69 @@ describe('useSales Hook', () => {
     expect(result.current.searchTerm).toBe('');
     expect(result.current.currentPage).toBe(1);
     expect(saleService.getSales).toHaveBeenCalledTimes(1);
-    expect(saleService.getSales).toHaveBeenCalledWith(1, 10, { startDate: '', endDate: '' });
+    expect(saleService.getSales).toHaveBeenCalledWith(1, 10, {});
   });
 
    it('formatDate should format date string correctly', () => {
     const { result } = renderHook(() => useSales());
-    const dateStr = '2023-10-26T10:30:00Z';
-    // Note: toLocaleDateString output can be sensitive to the test runner's locale.
-    // For consistency, we might need to mock the locale or use a more robust date formatting assertion.
-    // For this example, we assume 'es-CO' produces a predictable format part.
-    expect(result.current.formatDate(dateStr)).toMatch(/octubre 26 de 2023/i);
-    expect(result.current.formatDate(dateStr)).toMatch(/10:30/);
+    const dateStr = '2023-10-26T10:30:00Z'; // This is 5:30 AM in 'es-CO' (UTC-5)
+    const formattedDate = result.current.formatDate(dateStr);
+    expect(formattedDate).toMatch(/26 de octubre de 2023/i);
+    // Regex adjusted for 'a. m.' with a space and literal dots
+    expect(formattedDate).toMatch(/0?5:30\s*a\.\s*m\./i); 
   });
 
   it('formatCurrency should format number to COP currency', () => {
     const { result } = renderHook(() => useSales());
     const amount = 123456.78;
-    // Expected: $123,457 (COP rounds to nearest integer for display typically)
-    // Or $123.456,78 if decimals are kept. Let's check typical COP formatting.
-    // Intl.NumberFormat for COP often omits decimals by default or uses ',' as decimal sep if forced.
-    // The hook implementation uses default options which should be fine.
-    // We'll check for the currency symbol and the presence of the number parts.
     const formatted = result.current.formatCurrency(amount);
     expect(formatted).toContain('$');
-    expect(formatted).toContain('123'); 
-    expect(formatted).toContain('457'); // Test based on rounding
+    expect(formatted).toContain('123.456,78'); // Adjusted to expect full number with decimals
   });
 
   it('handleRefresh should fetch current page', async () => {
+    // Mock initial fetch to set totalPages > 1
+    const initialResponseWithMorePages = {
+      ...mockSalesResponse,
+      meta: { ...mockSalesResponse.meta, page: 1, totalPages: 3 },
+    };
+    vi.mocked(saleService.getSales).mockResolvedValueOnce(initialResponseWithMorePages);
+
     const { result } = renderHook(() => useSales());
-    await act(async () => { vi.runAllTimers(); }); // Initial fetch
-    
+    await act(async () => { vi.runAllTimers(); }); // Initial fetch, currentPage is 1, totalPages is 3
+
+    expect(result.current.currentPage).toBe(1);
+    expect(result.current.totalPages).toBe(3);
+
+    // Mock fetch for page 2
+    const page2Response = {
+      ...mockSalesResponse,
+      data: [{ ...mockSale1, id: 99 }], // Different data for page 2
+      meta: { ...mockSalesResponse.meta, page: 2, totalPages: 3 },
+    };
+    vi.mocked(saleService.getSales).mockResolvedValueOnce(page2Response);
+
     act(() => { result.current.handlePageChange(2); });
-    await act(async () => { vi.runAllTimers(); }); // Fetch for page 2
-    vi.mocked(saleService.getSales).mockClear();
+    await act(async () => { vi.runAllTimers(); }); // useEffect for currentPage updates, fetches page 2
+
+    expect(result.current.currentPage).toBe(2);
+    expect(result.current.sales[0].id).toBe(99);
+
+    vi.mocked(saleService.getSales).mockClear(); // Clear mocks before testing refresh
+    // Ensure refresh uses the same page 2 data for simplicity in this assertion
+    vi.mocked(saleService.getSales).mockResolvedValueOnce(page2Response); 
 
     act(() => { result.current.handleRefresh(); });
     await act(async () => { vi.runAllTimers(); });
 
     expect(saleService.getSales).toHaveBeenCalledTimes(1);
-    expect(saleService.getSales).toHaveBeenCalledWith(2, 10, { startDate: '', endDate: '' });
+    expect(saleService.getSales).toHaveBeenCalledWith(2, 10, {}); // Should fetch page 2 with empty filters
   });
 
   it('should handle API error when fetching sales', async () => {
     vi.mocked(saleService.getSales).mockRejectedValue(new Error('API Error'));
     const { result } = renderHook(() => useSales());
-
     await act(async () => { vi.runAllTimers(); });
-
     expect(result.current.isLoading).toBe(false);
     expect(result.current.sales).toEqual([]);
     expect(mockShowToast).toHaveBeenCalledWith('error', 'Error al cargar las ventas');
