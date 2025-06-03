@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { saleService, Sale } from '../../../api/sale/saleService';
 import { useToast } from '../../../../../shared/context/ToastContext';
 
+interface SortConfig {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
 export const useSales = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +18,7 @@ export const useSales = () => {
     startDate: '',
     endDate: '',
   });
-  const [sortConfig, setSortConfig] = useState({
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
     field: 'saleDate',
     direction: 'desc'
   });
@@ -60,7 +65,7 @@ export const useSales = () => {
     setCurrentPage(1);
   };
 
-  const sortSales = (sales: Sale[], config: { field: string; direction: string }) => {
+  const sortSales = (sales: Sale[], config: { field: string; direction: 'asc' | 'desc' }) => {
     if (!config.field) return sales;
 
     const sortedSales = [...sales].sort((a, b) => {

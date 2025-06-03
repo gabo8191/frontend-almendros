@@ -119,24 +119,40 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sale.details.map((detail) => {
-                  const subtotal = detail.quantity * detail.unitPrice - detail.discountAmount;
+                {sale.details.map((detail: any) => {
+                  const productName = detail.product?.name || detail.productName || 'Producto no disponible';
+                  const productDescription = detail.product?.description;
+
+                  const unitPrice = typeof detail.unitPrice === 'number' ? detail.unitPrice : 0;
+                  let discountAmount = typeof detail.discountAmount === 'number' ? detail.discountAmount : 0;
+                  
+                  if (typeof detail.discountAmount !== 'number' && 
+                      typeof detail.subtotal === 'number' && 
+                      typeof detail.quantity === 'number') {
+                    const calculatedDiscount = (detail.quantity * unitPrice) - detail.subtotal;
+                    if (calculatedDiscount >= 0) {
+                      discountAmount = calculatedDiscount;
+                    }
+                  }
+
+                  const subtotalDisplay = (detail.quantity * unitPrice) - discountAmount;
+                  
                   return (
                     <tr key={detail.id}>
                       <td className="px-4 py-3">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {detail.product?.name || 'Producto no disponible'}
+                            {productName}
                           </div>
-                          {detail.product?.description && (
-                            <div className="text-xs text-gray-500">{detail.product.description}</div>
+                          {productDescription && (
+                            <div className="text-xs text-gray-500">{productDescription}</div>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{detail.quantity}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{formatCurrency(detail.unitPrice)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{formatCurrency(detail.discountAmount)}</td>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{formatCurrency(subtotal)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{detail.quantity || 0}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{formatCurrency(unitPrice)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{formatCurrency(discountAmount)}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-800">{formatCurrency(subtotalDisplay)}</td>
                     </tr>
                   );
                 })}

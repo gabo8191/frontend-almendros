@@ -1,7 +1,9 @@
 import React from 'react';
-import { Package } from 'lucide-react';
-import { InventoryMovement } from '../../api/inventory/inventoryService';
+import { Package, ArrowUp, ArrowDown } from 'lucide-react';
+import { InventoryMovement, MovementType } from '../../api/inventory/inventoryService';
 import Button from '../../../../shared/components/Button';
+import Spinner from '../../../../shared/components/Spinner';
+import Table from '../../../../shared/components/Table';
 
 interface InventoryMovementsTableProps {
   movements: InventoryMovement[];
@@ -24,17 +26,24 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
   formatDate,
   onPageChange,
 }) => {
-  const MovementTypeBadge = ({ type }: { type: string }) => (
-    <span
-      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-        type === 'ENTRY'
-          ? 'bg-green-100 text-green-800'
-          : 'bg-red-100 text-red-800'
-      }`}
-    >
-      {type === 'ENTRY' ? 'Entrada' : 'Salida'}
-    </span>
-  );
+  const MovementTypeBadgeAndIcon = ({ type }: { type: MovementType }) => {
+    const isEntry = type === 'ENTRY';
+    return (
+      <span
+        className={`px-2 inline-flex items-center text-xs leading-5 font-semibold rounded-full ${
+          isEntry
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+        }`}
+      >
+        {isEntry ? 
+            <ArrowUp size={14} className="mr-1" /> : 
+            <ArrowDown size={14} className="mr-1" />
+        }
+        {isEntry ? 'Entrada' : 'Salida'}
+      </span>
+    );
+  };
 
   const EmptyState = () => (
     <div className="text-center py-8">
@@ -51,15 +60,85 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
   );
 
   const LoadingState = () => (
-    <div className="text-center py-8">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+    <div className="text-center py-12">
+      <Spinner size="lg" className="mx-auto" />
       <p className="mt-4 text-gray-600">Cargando movimientos...</p>
+    </div>
+  );
+
+  const columns = [
+    {
+      header: 'Fecha',
+      renderCell: (movement: InventoryMovement) => formatDate(movement.movementDate),
+      cellClassName: 'whitespace-normal',
+    },
+    {
+      header: 'Tipo',
+      renderCell: (movement: InventoryMovement) => <MovementTypeBadgeAndIcon type={movement.type} />,
+    },
+    {
+      header: 'Producto',
+      renderCell: (movement: InventoryMovement) => (
+        <div>
+          <div className="text-sm font-medium text-gray-900">{movement.product.name}</div>
+          <div className="text-sm text-gray-500">Stock actual: {movement.product.currentStock}</div>
+        </div>
+      ),
+      cellClassName: 'whitespace-normal',
+    },
+    {
+      header: 'Cantidad',
+      renderCell: (movement: InventoryMovement) => `${movement.quantity} unidades`,
+      cellClassName: 'text-sm text-gray-900',
+    },
+    {
+      header: 'Razón',
+      renderCell: (movement: InventoryMovement) => (
+        <div>
+          <div className="text-sm text-gray-900">{movement.reason}</div>
+          {movement.notes && (
+            <div className="text-sm text-gray-500">{movement.notes}</div>
+          )}
+        </div>
+      ),
+      cellClassName: 'whitespace-normal',
+    },
+    {
+      header: 'Usuario',
+      renderCell: (movement: InventoryMovement) => (
+        <div>
+          <div className="text-sm text-gray-900">
+            {movement.user.firstName} {movement.user.lastName}
+          </div>
+          <div className="text-sm text-gray-500">{movement.user.email}</div>
+        </div>
+      ),
+      cellClassName: 'whitespace-normal',
+    },
+  ];
+
+  const renderMobileCard = (movement: InventoryMovement) => (
+    <div className="bg-white border rounded-lg p-4 shadow-sm">
+        <div className="flex justify-between items-start mb-2">
+            <div className="text-sm font-medium text-gray-900">{movement.product.name}</div>
+            <MovementTypeBadgeAndIcon type={movement.type} />
+        </div>
+        <div className="text-xs text-gray-500 mb-2">{formatDate(movement.movementDate)}</div>
+        
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
+            <div><span className="text-gray-500">Cantidad:</span> {movement.quantity}</div>
+            <div><span className="text-gray-500">Stock:</span> {movement.product.currentStock}</div>
+        </div>
+        <div className="text-sm mb-1"><span className="text-gray-500">Razón:</span> {movement.reason}</div>
+        {movement.notes && <div className="text-xs text-gray-500 mb-2"><span className="font-medium">Notas:</span> {movement.notes}</div>}
+        <div className="text-xs text-gray-500 border-t pt-1 mt-1">
+            Registrado por: {movement.user.firstName} {movement.user.lastName}
+        </div>
     </div>
   );
 
   const Pagination = () => {
     if (totalPages <= 1) return null;
-
     return (
       <div className="flex justify-center mt-6 space-x-2">
         <Button
@@ -87,63 +166,13 @@ const InventoryMovementsTable: React.FC<InventoryMovementsTableProps> = ({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead>
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fecha
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Producto
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Cantidad
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Razón
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Usuario
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {movements.map((movement) => (
-              <tr key={movement.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDate(movement.movementDate)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <MovementTypeBadge type={movement.type} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{movement.product.name}</div>
-                  <div className="text-sm text-gray-500">Stock actual: {movement.product.currentStock}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {movement.quantity} unidades
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{movement.reason}</div>
-                  {movement.notes && (
-                    <div className="text-sm text-gray-500">{movement.notes}</div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {movement.user.firstName} {movement.user.lastName}
-                  </div>
-                  <div className="text-sm text-gray-500">{movement.user.email}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table 
+        columns={columns} 
+        data={movements} 
+        rowKeyExtractor={(movement) => movement.id} 
+        renderMobileCard={renderMobileCard}
+        mobileBreakpoint="lg"
+      />
       <Pagination />
     </>
   );
