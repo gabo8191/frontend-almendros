@@ -310,8 +310,24 @@ export const useNewSaleForm = (isOpen: boolean) => {
   
       await saleService.createSale(saleData);
       showToast('success', 'Venta registrada exitosamente');
-      onSaleCreated();
-      resetForm();
+      
+      try {
+        onSaleCreated();
+      } catch (onSaleCreatedError: any) {
+        console.error('Error in onSaleCreated:', onSaleCreatedError);
+        showToast('error', 'Error procesando post-creación de venta. Venta guardada.');
+        // Optionally re-throw or handle differently if this error should also mark the whole process as failed
+        // For now, we assume the sale itself was created, so we don't return false from here.
+      }
+
+      try {
+        resetForm();
+      } catch (resetFormError: any) {
+        console.error('Error in resetForm:', resetFormError);
+        showToast('error', 'Error reiniciando el formulario. Venta guardada.');
+        // Similar to above, decide if this should affect the overall success status
+      }
+      
       return true;
     } catch (error: any) {
       let displayMessage = 'Error al registrar la venta. Inténtalo de nuevo.';

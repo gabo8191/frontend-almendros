@@ -135,7 +135,7 @@ const SalesPage: React.FC = () => {
       <NewSaleModal
         isOpen={isNewSaleModalOpen}
         onClose={() => setIsNewSaleModalOpen(false)}
-        onSuccess={handleSaleCreated}
+        onSaleCreated={handleSaleCreated}
       />
 
       <SaleDetailsModal
