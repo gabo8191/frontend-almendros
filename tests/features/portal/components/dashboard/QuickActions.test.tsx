@@ -3,7 +3,6 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuickActions from '../../../../../src/features/portal/components/dashboard/QuickActions';
-import { type LucideIcon } from 'lucide-react';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -14,19 +13,6 @@ vi.mock('react-router-dom', async (importOriginal) => {
     useNavigate: () => mockNavigate,
   };
 });
-
-// A simple mock for Lucide icons, similar to DashboardCard.test.tsx
-// The actual icons (Plus, Package, etc.) are used in the component, 
-// but their rendering isn't the focus of this unit test.
-// We just need a valid component for the 'icon' prop within the actions array.
-const MockLucideIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg data-testid="mock-quickaction-icon" {...props} />
-);
-
-// To allow QuickActions to use specific icons, we can mock them individually if needed,
-// or ensure our generic MockLucideIcon is accepted by its internal logic.
-// For QuickActions, the icons are directly referenced (e.g., action.icon).
-// We'll rely on the buttons being identifiable by their text.
 
 const defaultProps = {
   onNewSale: vi.fn(),

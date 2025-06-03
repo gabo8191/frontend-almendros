@@ -73,7 +73,7 @@ describe('DashboardCard Component', () => {
     expect(screen.queryByText('Test Value')).not.toBeInTheDocument();
     expect(screen.queryByTestId('mock-lucide-icon')).not.toBeInTheDocument();
 
-    const loadingContainer = screen.getByText((content, element) => {
+    const loadingContainer = screen.getByText((_content, element) => {
         // The loading skeleton is a div with class animate-pulse
         return element?.tagName.toLowerCase() === 'div' && element.classList.contains('animate-pulse');
     });

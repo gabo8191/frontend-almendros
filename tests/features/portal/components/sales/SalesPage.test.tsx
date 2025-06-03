@@ -1,5 +1,4 @@
 /// <reference types="vitest/globals" />
-import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import SalesPage from '../../../../../src/features/portal/components/sales/SalesPage';
@@ -30,7 +29,7 @@ vi.mock('../../../../../src/features/portal/components/sales/SaleDetailsModal', 
   ) : null),
 }));
 vi.mock('../../../../../src/features/portal/components/sales/SalesTable', () => ({
-  default: vi.fn((props) => <div data-testid="mock-sales-table">Sales Table</div>),
+  default: vi.fn((_props) => <div data-testid="mock-sales-table">Sales Table</div>),
 }));
 
 const mockUseSalesReturn = {

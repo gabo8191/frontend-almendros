@@ -74,7 +74,7 @@ describe('useDashboard Hook', () => {
     
     vi.mocked(useToast).mockReturnValue({ showToast: mockShowToast });
 
-    vi.mocked(saleService.getSales).mockImplementation(async (page, limit, filters) => {
+    vi.mocked(saleService.getSales).mockImplementation(async (_page, limit, _filters) => {
       if (limit === 5) { 
         return {
           data: Array(2).fill(null).map((_, i) => ({
@@ -140,7 +140,7 @@ describe('useDashboard Hook', () => {
     const expectedRecentSale2: RecentSale = { id: 301, clientName: 'Hook Recent Client 2', total: 75, date: '2023-01-02T11:00:00Z' };
 
     let saleServiceCallCount = 0;
-    vi.mocked(saleService.getSales).mockImplementation(async (page, limit, filters) => {
+    vi.mocked(saleService.getSales).mockImplementation(async (_page, limit, _filters) => {
       saleServiceCallCount++;
       if (saleServiceCallCount === 1) return { data: [todaySale], meta: { ...defaultMeta, total: 1, limit: 100 } };
       if (saleServiceCallCount === 2) return { data: [weekSale1, weekSale2], meta: { ...defaultMeta, total: 2, limit: 100 } };

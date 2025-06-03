@@ -126,7 +126,7 @@ describe('useSales Hook', () => {
     vi.mocked(saleService.getSales).mockClear().mockResolvedValueOnce({
         ...mockSalesResponse, meta: { ...mockSalesResponse.meta, totalPages: 3 }
     });
-    const { result: resultForPageChange, rerender } = renderHook(() => useSales());
+    const { result: resultForPageChange, rerender: _rerender } = renderHook(() => useSales());
     await act(async () => { vi.runAllTimers(); }); // Initial fetch, totalPages will be 3
 
     vi.mocked(saleService.getSales).mockClear().mockResolvedValueOnce({

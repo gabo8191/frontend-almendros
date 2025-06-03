@@ -1,5 +1,4 @@
 /// <reference types="vitest/globals" />
-import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SuppliersPage from '../../../../../src/features/portal/components/suppliers/SuppliersPage';
@@ -33,7 +32,7 @@ vi.mock('../../../../../src/features/portal/components/suppliers/EditSupplierMod
   ) : null),
 }));
 vi.mock('../../../../../src/features/portal/components/suppliers/SuppliersTable', () => ({
-  default: vi.fn((props) => <div data-testid="mock-suppliers-table">Suppliers Table</div>),
+  default: vi.fn((_props) => <div data-testid="mock-suppliers-table">Suppliers Table</div>),
 }));
 
 const mockShowToast = vi.fn();
