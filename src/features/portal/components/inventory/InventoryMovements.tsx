@@ -58,7 +58,7 @@ const InventoryMovements: React.FC = () => {
         )}
       </div>
 
-      <Card>
+      <Card compact>
         {/* Filters */}
         <div className="mb-6 flex flex-col md:flex-row gap-4">
           <Input

@@ -3,7 +3,7 @@ import { authService } from '../api/authService';
 import { User, Role } from '../types';
 import { useToast } from '../../../shared/context/ToastContext';
 
-interface AuthContextProps {
+export interface AuthContextProps {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;

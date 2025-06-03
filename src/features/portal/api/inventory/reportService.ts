@@ -186,7 +186,7 @@ export const inventoryReportService = {
       if (format === 'xlsx') {
         exportToExcel(exportData);
       } else {
-        exportToPDF(exportData);
+        await exportToPDF(exportData);
       }
     } catch (error) {
       console.error('Error exporting inventory report:', error);
@@ -230,7 +230,7 @@ export const inventoryReportService = {
       if (format === 'xlsx') {
         exportToExcel(exportData);
       } else {
-        exportToPDF(exportData);
+        await exportToPDF(exportData);
       }
     } catch (error) {
       console.error('Error exporting sales report:', error);
@@ -309,7 +309,7 @@ export const inventoryReportService = {
       if (format === 'xlsx') {
         exportToExcel(exportData);
       } else {
-        exportToPDF(exportData);
+        await exportToPDF(exportData);
       }
     } catch (error) {
       console.error('Error exporting detailed sales report:', error);
